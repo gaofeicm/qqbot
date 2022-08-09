@@ -1,0 +1,23 @@
+server:
+  port: 9959
+spring:
+  datasource:
+    username: root
+    password: 961120
+    url: jdbc:mysql://wo.gaofeicm.ga:15726/qqbot?useUnicode=true&characterEncoding=gbk&autoReconnect=true&failOverReadOnly=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      read-only: false
+      connection-timeout: 60000
+      idle-timeout: 30000
+      validation-timeout: 3000
+      max-lifetime: 60000
+      login-timeout: 5
+      maximum-pool-size: 60
+      minimum-idle: 10
+mybatis-plus:
+  mapper-locations: classpath*:com/gaofeicm/qqbot/dao/*Mapper.xml
+serviceAddress: ws://127.0.0.1:5701
+admin:
+  qq: 952219232
