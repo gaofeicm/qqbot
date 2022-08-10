@@ -4,8 +4,9 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
-import com.gaofeicm.qqbot.service.CookieServiceImpl;
+import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.JdServiceImpl;
+import com.gaofeicm.qqbot.service.QlService;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.springframework.boot.ApplicationArguments;
@@ -15,10 +16,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Gaofeicm
@@ -27,7 +25,10 @@ import java.util.Map;
 public class FriendMessageEvent extends MessageEvent implements ApplicationRunner {
 
     @Resource
-    private CookieServiceImpl cookieService;
+    private CookieService cookieService;
+
+    @Resource
+    private QlService qlService;
 
     @Resource
     private JdServiceImpl jdService;
@@ -48,6 +49,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         List<Command> cmds = CommandUtils.getCommand(qq);
         if(cmds != null && !cmds.isEmpty()){
             Command cmd = cmds.get(0);
+            cmd.putParam("msg", msg);
             int index = CommonUtils.indexOf(msg, cmd.getOption());
             if(index > -1){
                 JSONObject obj = (JSONObject) SpringUtils.invokeMethod(SpringUtils.getBean(cmd.getBean()), cmd.getAction().get(index).toString(), new Class[]{JSONObject.class}, cmd.getParam());
@@ -58,17 +60,39 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 });
                 cmds.remove(cmd);
                 return;
+            }else{
+                if("取消当前待办".equals(msg)){
+                    cmds.remove(cmd);
+                    MessageUtils.sendPrivateMsg(qq, "任务已取消！");
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.append("指令回复出错!您当前的待办任务如下：\r\n");
+                sb.append(cmd.getMessage());
+                MessageUtils.sendPrivateMsg(qq, sb.toString());
             }
         }
         //ck检查
         String ck = jdService.checkCk(msg);
         if(ck != null){
-            MessageUtils.sendPrivateMsg(message.getString("user_id"), "正在检查账号状态，请稍候。。。");
+            MessageUtils.sendPrivateMsg(qq, "正在检查账号状态，请稍候。。。");
             String loadMsg = jdService.loadCk(ck, qq);
-            MessageUtils.sendPrivateMsg(message.getString("user_id"), loadMsg);
+            MessageUtils.sendPrivateMsg(qq, loadMsg);
             return;
         }
+        Map<String, String> header = new HashMap<>();
+        String s = "";
         switch (msg){
+            case "同步":
+                this.syncQlCookie(qq, msg);
+                break;
+            case "查询青龙":
+                header.put("Authorization", "Bearer 558b2e8b-f6de-49c8-b91b-0a21f8c1f60d");
+                header.put("User-Agent", "qqbot client");
+                header.put("content-type", "application/json");
+                s = HttpRequestUtils.doGet("http://wou.gaofeicm.cf:8080/open/envs?searchValue=&t=" + System.currentTimeMillis(), header);
+                MessageUtils.sendPrivateMsg(qq, s);
+                break;
             case "查询":
                 List<Cookie> cookies = cookieService.getCookieByQq(qq);
                 cookies.forEach(cookie -> {
@@ -77,10 +101,10 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 });
                 break;
             case "原理":
-                MessageUtils.sendPrivateMsg(message.getString("user_id"), "1、自动帮忙做一些需要手动点的任务\r\n 2、一些活动需要邀请好友帮忙做任务，大家挂一起都是互相互助\r\n");
+                MessageUtils.sendPrivateMsg(qq, "1、自动帮忙做一些需要手动点的任务\r\n 2、一些活动需要邀请好友帮忙做任务，大家挂一起都是互相互助\r\n");
                 break;
             case "教程":
-                MessageUtils.sendPrivateMsg(message.getString("user_id"), this.getJcStr());
+                MessageUtils.sendPrivateMsg(qq, this.getJcStr());
                 break;
             case "账号管理":
                 this.manageAccount(qq, msg);
@@ -89,19 +113,20 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 this.manageQl(qq, msg);
                 break;
             case "小姐姐":
-                MessageUtils.sendPrivateMsg(message.getString("user_id"), "[CQ:image,file=http://api.btstu.cn/sjbz/zsy.php,cache=0]");
+                MessageUtils.sendPrivateMsg(qq, "[CQ:image,file=http://api.btstu.cn/sjbz/zsy.php,cache=0]");
                 break;
             case "舔狗":
             case "舔狗日记":
-                MessageUtils.sendPrivateMsg(message.getString("user_id"), HttpRequestUtils.doGet("https://api.oick.cn/dog/api.php"));
+                MessageUtils.sendPrivateMsg(qq, HttpRequestUtils.doGet("https://api.oick.cn/dog/api.php"));
                 break;
             case "二次元":
-                MessageUtils.sendPrivateMsg(message.getString("user_id"), "[CQ:image,file=http://www.dmoe.cc/random.php,cache=0]");
+                MessageUtils.sendPrivateMsg(qq, "[CQ:image,file=http://www.dmoe.cc/random.php,cache=0]");
                 break;
             case "新闻":
-                MessageUtils.sendPrivateMsg(message.getString("user_id"), "今日新闻（" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "）：\r\n" + JSONObject.parseObject(HttpRequestUtils.doGet("http://bjb.yunwj.top/php/qq.php")).getString("wb").replaceFirst("【换行】", "").replaceAll("【换行】", "\r\n"));
+                MessageUtils.sendPrivateMsg(qq, "今日新闻（" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "）：\r\n" + JSONObject.parseObject(HttpRequestUtils.doGet("http://bjb.yunwj.top/php/qq.php")).getString("wb").replaceFirst("【换行】", "").replaceAll("【换行】", "\r\n"));
                 break;
             default:
+                MessageUtils.sendPrivateMsg(qq, "我只是个笨蛋机器人，你说的话我还不会接。\r\n目前打算上线签到系统，连续签到可以赢取代挂时长哦！");
         }
     }
 
@@ -119,17 +144,15 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         if(!qq.equals(CommonUtils.getAdminQq())){
             return;
         }
-        List<Cookie> cookies = cookieService.getCookie(new HashMap<>(0));
-        StringBuilder message = new StringBuilder("----------------------------cookie列表----------------------\r\n");
-        message.append("序号  QQ                  pin                              启用    到期时间\r\n");
-        /*Command command = CommandUtils.getDefaultCommand(message);
+        StringBuilder message = new StringBuilder("----------------------------面板管理----------------------\r\n");
+        message.append("1、添加面板\r\n");
+        message.append("2、查看面板\r\n");
+        message.append("3、删除面板\r\n");
+        Command command = CommandUtils.getDefaultCommand(message.toString());
         command.setOption("1", "2", "3");
-        command.setAction("setCookieExpForMonth", "setCookieExpForYear", "refuseCookie");
-        command.putParam("from", qq);*/
-        for (int i = 0; i < cookies.size(); i++) {
-            Cookie cookie = cookies.get(i);
-            message.append(i + 1).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append((boolean)cookie.getAvailable() ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
-        }
+        command.setAction("addQlStr", "findQl", "deleteQlStr");
+        command.putParam("from", qq).putParam("to", qq);
+        CommandUtils.addCommand(qq, command);
         MessageUtils.sendPrivateMsg(qq, message.toString());
     }
 
@@ -142,18 +165,121 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         if(!qq.equals(CommonUtils.getAdminQq())){
             return;
         }
-        List<Cookie> cookies = cookieService.getCookie(new HashMap<>(0));
-        StringBuilder message = new StringBuilder("----------------------------cookie列表----------------------\r\n");
-        message.append("序号  QQ                  pin                              启用    到期时间\r\n");
-        /*Command command = CommandUtils.getDefaultCommand(message);
+        StringBuilder message = new StringBuilder("----------------------------账号管理----------------------\r\n");
+        message.append("1、用户列表\r\n");
+        message.append("2、分配面板\r\n");
+        message.append("3、设置过期时间\r\n");
+        Command command = CommandUtils.getDefaultCommand(message.toString());
         command.setOption("1", "2", "3");
-        command.setAction("setCookieExpForMonth", "setCookieExpForYear", "refuseCookie");
-        command.putParam("from", qq);*/
-        for (int i = 0; i < cookies.size(); i++) {
-            Cookie cookie = cookies.get(i);
-            message.append(i + 1).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append((boolean)cookie.getAvailable() ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
-        }
+        command.setAction("findCookie", "addQlCookieStr", "setCookieExpStr");
+        command.putParam("from", qq).putParam("to", qq);
+        CommandUtils.addCommand(qq, command);
         MessageUtils.sendPrivateMsg(qq, message.toString());
+    }
+
+    private void syncQlCookie(String qq, String mag){
+        if(!qq.equals(CommonUtils.getAdminQq())){
+            return;
+        }
+        List<Map<String, Object>> cks = cookieService.getAvailableCookie();
+        Map<String, Map<String, Object>> qls = new HashMap<>();
+        Map<String, JSONArray> tck = new HashMap<>();
+        for (Map<String, Object> ck : cks) {
+            String name = ck.get("name").toString();
+            if(tck.get(name) == null){
+                tck.put(name, new JSONArray());
+            }
+            if(qls.get(name) == null){
+                qls.put(name, new HashMap<>(){{
+                    put("name", ck.get("name"));
+                    put("address", ck.get("address"));
+                    put("token", ck.get("token"));
+                    put("tokenType", ck.get("tokenType"));
+                }});
+            }
+            tck.get(name).add(new HashMap<>(3){{
+                put("value", ck.get("cookie"));
+                put("name", "JD_COOKIE");
+                put("remarks", ck.get("qq"));
+            }});
+        }
+        StringBuilder sb = new StringBuilder();
+        tck.forEach((s, list) -> {
+            this.deleteQlOriginalData(qls.get(s));
+            this.addQlOriginalData(qls.get(s), list);
+            sb.append("面板名称：").append(qls.get(s).get("name")).append("，拥有").append(list.size()).append("条ck\r\n");
+        });
+        MessageUtils.sendPrivateMsg(qq, "同步完成\r\n" + sb.toString());
+    }
+
+    /**
+     * 添加ck
+     * @param map map
+     * @param list list
+     */
+    private void addQlOriginalData(Map<String, Object> map, JSONArray list){
+        try{
+            Map<String, String> header = this.getQlHeader(map);
+            String body = list.toJSONString();
+            String s = HttpRequestUtils.doPost("http://wou.gaofeicm.cf:8080//open/envs?t=" + System.currentTimeMillis(), body, header);
+            if (s != null) {
+                JSONObject jsonObject = JSONObject.parseObject(s);
+                if (!"200".equals(jsonObject.getString("code"))) {
+                    throw new RuntimeException();
+                }
+            }else{
+                throw new RuntimeException("返回值为null");
+            }
+        }catch (Exception e){
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "添加原始数据出现了异常！" + map.toString() + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 删除面板原始数据
+     * @param map map
+     */
+    private void deleteQlOriginalData(Map<String, Object> map){
+        try{
+            JSONArray qlData = this.getQlData(map);
+            JSONArray ids = new JSONArray();
+            for (Object data : qlData) {
+                JSONObject jsonObject = JSONObject.parseObject(data.toString());
+                ids.add(jsonObject.getString("id"));
+            }
+            if(!ids.isEmpty()) {
+                Map<String, String> header = this.getQlHeader(map);
+                String s = HttpRequestUtils.doDelete(map.get("address") + "/open/envs?&t=" + System.currentTimeMillis(), ids.toJSONString(), header);
+                if (s != null) {
+                    JSONObject jsonObject = JSONObject.parseObject(s);
+                    if (!"200".equals(jsonObject.getString("code"))) {
+                        throw new RuntimeException();
+                    }
+                }else{
+                    throw new RuntimeException("返回值为null");
+                }
+            }
+        }catch (Exception e){
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "删除原始数据出现了异常！" + map.toString() + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 获取青龙数据
+     * @param map map
+     * @return array
+     */
+    private JSONArray getQlData(Map<String, Object> map){
+        Map<String, String> header = this.getQlHeader(map);
+        String s = HttpRequestUtils.doGet(map.get("address") + "/open/envs?searchValue=&t=" + System.currentTimeMillis(), header);
+        if(s != null){
+            return JSONObject.parseObject(s).getJSONArray("data");
+        }else{
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "获取青龙面板数据出现了异常！" + map.get("address"));
+            throw new RuntimeException();
+        }
     }
 
     /**
@@ -290,6 +416,14 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         sb.append("\r\n");
         sb.append("新号最好别挂，会影响到别人的号的，挂多个号的请重新下单，未重新拍的提交了也不会生效，过期了请及时续费，未续费重新提交的会被系统随机检测到封账号，请及时续费。\r\n");
         return sb.toString();
+    }
+
+    public Map<String, String> getQlHeader(Map<String, Object> map){
+        Map<String, String> header = new HashMap<>();
+        header.put("Authorization", map.get("tokenType") + " " + map.get("token"));
+        header.put("User-Agent", "qqbot client");
+        header.put("content-type", "application/json");
+        return header;
     }
 
 }
