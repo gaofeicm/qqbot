@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 public class JdServiceImpl {
 
     @Resource
-    private CookieServiceImpl cookieService;
+    private CookieService cookieService;
 
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     /**
@@ -174,7 +174,7 @@ public class JdServiceImpl {
         long time = System.currentTimeMillis();
         String body = "{\"method\":\"userCashRecord\",\"data\":{\"channel\":1,\"pageNum\":1,\"pageSize\":20}}";
         String str = "lite-android&" + body + "&android&3.1.0&MyAssetsService.execute&" + time + "&846c4c32dae910ef";
-        String sign = CommonUtils.HMACSHA256(str, "12aea658f76e453faf803d15c40a72e0");
+        String sign = CommonUtils.HmacSHA256(str, "12aea658f76e453faf803d15c40a72e0");
         String url = "https://api.m.jd.com/client.actionapi?functionId=MyAssetsService.execute&body=" + URLEncoder.encode(body, "UTF-8") + "&appid=lite-android&client=android&uuid=846c4c32dae910ef&clientVersion=3.1.0&t=" + time + "&sign=" + sign;
         String s = HttpRequestUtils.doGet(url, header);
         return JSONObject.parseObject(s);
