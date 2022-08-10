@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -33,7 +35,7 @@ public class CommonUtils {
     public static int indexOf(Object object, List<Object> list){
         int index = -1;
         for (int i = 0; i < list.size(); i++) {
-            if(object == list.get(i) || object.equals(list.get(i))){
+            if(object == list.get(i) || object.equals(list.get(i)) || object.toString().startsWith((String) list.get(i))){
                 index = i;
                 break;
             }
@@ -80,14 +82,13 @@ public class CommonUtils {
      * @param key 密钥
      * @return 加密文本
      */
-    public static String HMACSHA256(String data, String key) {
+    public static String HmacSHA256(String data, String key) {
         StringBuilder sb = new StringBuilder();
         try {
-            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secret_key = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA256");
-            sha256_HMAC.init(secret_key);
-
-            byte[] array = sha256_HMAC.doFinal(data.getBytes("UTF-8"));
+            Mac sha256HMAC = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA256");
+            sha256HMAC.init(secretKey);
+            byte[] array = sha256HMAC.doFinal(data.getBytes("UTF-8"));
             for (byte item : array) {
                 sb.append(Integer.toHexString((item & 0xFF) | 0x100).substring(1, 3));
             }
@@ -95,5 +96,18 @@ public class CommonUtils {
             e.printStackTrace();
         }
         return sb.toString();
+    }
+
+    /****
+     * 传入具体日期 ，返回具体日期增加n个月。
+     * @param date 时间
+     * @param month 差值
+     * @return date
+     */
+    public static Date subMonth(Date date, int month) {
+        Calendar rightNow = Calendar.getInstance();
+        rightNow.setTime(date);
+        rightNow.add(Calendar.MONTH, month);
+        return rightNow.getTime();
     }
 }
