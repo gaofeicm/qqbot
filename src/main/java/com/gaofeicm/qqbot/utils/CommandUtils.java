@@ -1,5 +1,6 @@
 package com.gaofeicm.qqbot.utils;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.gaofeicm.qqbot.command.entity.Command;
 
 import java.util.List;
@@ -55,5 +56,16 @@ public class CommandUtils {
         command.setBean("commandService");
         command.setMessage(message);
         return command;
+    }
+
+    public static JSONObject getQlToken(String url){
+        String s = HttpRequestUtils.doGet(url);
+        if(s != null){
+            JSONObject jsonObject = JSONObject.parseObject(s);
+            if(jsonObject.getIntValue("code") == 200){
+                return jsonObject.getJSONObject("data");
+            }
+        }
+        return null;
     }
 }
