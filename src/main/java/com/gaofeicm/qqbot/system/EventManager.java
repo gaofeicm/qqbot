@@ -2,11 +2,18 @@ package com.gaofeicm.qqbot.system;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.gaofeicm.qqbot.event.BaseEventManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author Gaofeicm
+ */
 public class EventManager {
+
+    private final static Logger log = LoggerFactory.getLogger(EventManager.class);
 
     private static final Map<String, BaseEventManager> EVENT_MANAGER_MAP = new HashMap<>(4){{
         put("message", new MessageEventManger());
@@ -24,7 +31,9 @@ public class EventManager {
         String postType = msgObject.getString("post_type");
         BaseEventManager event = EVENT_MANAGER_MAP.get(postType);
         if(event == null){
-            System.out.println("unsupported post_type type:" + postType);
+            if(!"0".equals(msgObject.getString("retcode"))) {
+                log.warn("unsupported post_type type:" + postType);
+            }
         }else{
             event.handle(msgObject);
         }
