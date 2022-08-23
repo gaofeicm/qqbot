@@ -7,15 +7,15 @@ import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,12 +23,16 @@ import java.util.regex.Pattern;
  * @author Gaofeicm
  */
 @Component
+@EnableScheduling
 public class JdServiceImpl {
 
     @Resource
     private CookieService cookieService;
 
+    public static boolean checkCkSwitch = true;
+
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     /**
      * 获取用户京东农场
      * @param ck ck
@@ -325,18 +329,26 @@ public class JdServiceImpl {
      */
     public String loadCk(String ck, String qq) {
         String msg = "";
-        Map<String, String> header = new HashMap<>();
-        header.put("Cookie", ck);
-        header.put("referer", "https://h5.m.jd.com/");
-        header.put("User-Agent", "jdapp;iPhone;10.1.2;15.0;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
-        String s = HttpRequestUtils.doGet("https://plogin.m.jd.com/cgi-bin/ml/islogin", header);
-        JSONObject o = JSONObject.parseObject(s);
+        JSONObject o = this.checkLogin(ck);
         if (o.getIntValue("islogin") == 1) {
             msg = "提交成功，账号有效！";
         } else if (o.getIntValue("islogin") == 0) {
             msg = "账号无效，请重新获取！";
+            return msg;
         } else {
             msg = "账号状态未知，请联系管理员！";
+            return msg;
+        }
+        //谁提交ck，QQ号就改为谁的，如果有的话
+        Cookie cookieByPin = cookieService.getCookieByPin(ck);
+        if(cookieByPin != null){
+            Cookie cookie = new Cookie();
+            cookie.setId(cookieByPin.getId());
+            cookie.setQq(qq);
+            cookie.setCookie(ck);
+            cookie.setPtPin(CookieUtils.getPin(ck));
+            cookie.setPtKey(CookieUtils.getKey(ck));
+            cookieService.saveCookie(cookie);
         }
         //判断是否添加
         Cookie cookie = cookieService.getCookieByQqAndCk(qq, ck);
@@ -350,7 +362,7 @@ public class JdServiceImpl {
             cookie.setPtKey(CookieUtils.getKey(ck));
             cookieService.saveCookie(cookie);
             msg += "您是首次添加此账号，提交请求已发送给管理员，等待审核！";
-            String message = "QQ:" + qq + ",pin:" + CookieUtils.getPin(ck) + "正在请求添加账号，是否同意？\r\n1.同意(一个月)\r\n2.同意(一年)\r\n3.拒绝";
+            String message = "QQ:" + qq + ",pin:" + CookieUtils.getPin(ck) + "，id:" + cookie.getId() + "，正在请求添加账号，是否同意？\r\n1.同意(一个月)\r\n2.同意(一年)\r\n3.拒绝";
             Command command = CommandUtils.getDefaultCommand(message);
             command.setOption("1", "2", "3");
             command.setAction("setCookieExpForMonth", "setCookieExpForYear", "refuseCookie");
@@ -362,14 +374,33 @@ public class JdServiceImpl {
                 cookie.setCookie(ck);
                 cookie.setPtPin(CookieUtils.getPin(ck));
                 cookie.setPtKey(CookieUtils.getKey(ck));
+                cookie.setAvailable(1);
+                cookie.setUpdateTime(new Date());
                 cookieService.saveCookie(cookie);
                 msg += "ck有效期约为30天,代挂服务时间约剩" + CookieUtils.getExpireDay(cookie);
+                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "QQ：" + cookie.getQq() + "，pin：" + CookieUtils.getPin(ck) + "更新ck成功！");
             }else{
                 msg += "您的账号已过期，请续费后重新提交!";
             }
         }
         return msg;
     }
+
+    /**
+     * 检查ck是否是登陆状态
+     * @param ck ck
+     * @return
+     */
+    public JSONObject checkLogin(String ck){
+        Map<String, String> header = new HashMap<>();
+        header.put("Cookie", ck);
+        header.put("referer", "https://h5.m.jd.com/");
+        header.put("User-Agent", "jdapp;iPhone;10.1.2;15.0;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        String s = HttpRequestUtils.doGet("https://plogin.m.jd.com/cgi-bin/ml/islogin", header);
+        JSONObject o = JSONObject.parseObject(s);
+        return o;
+    }
+
 
     /**
      * 检查ck合法性
@@ -425,6 +456,36 @@ public class JdServiceImpl {
             return levelName + "Plus, 等级:" + userLevel + ", " + jingXiang;
         } else {
             return levelName + "会员, 等级:" + userLevel + ", " + jingXiang;
+        }
+    }
+
+    @Scheduled(cron = "${task.cron.ck.checkLogin}")
+    public void cronCheckCkLogin(){
+        if(!checkCkSwitch){
+            return;
+        }
+        MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(),  SDF.format(new Date()) + "：开始检查ck有效性");
+        List<Cookie> cookies = cookieService.getCookie(new HashMap<>(1){{put("available", "1");}});
+        AtomicInteger count = new AtomicInteger();
+        cookies.forEach(cookie -> {
+            JSONObject o = this.checkLogin(cookie.getCookie());
+            if(o != null){
+                if (o.getIntValue("islogin") == 1) {
+                    //正常
+                }else if (o.getIntValue("islogin") == 0) {
+                    Cookie ck = new Cookie();
+                    ck.setId(cookie.getId());
+                    ck.setAvailable(0);
+                    cookieService.saveCookie(ck);
+                    MessageUtils.sendPrivateMsg(cookie.getQq(), "您的账号【" + cookie.getPtPin() + "】已过期，请重新获取！");
+                    count.getAndIncrement();
+                }else{
+                    MessageUtils.sendPrivateMsg(cookie.getQq(), "账号状态未知，请联系管理员！");
+                }
+            }
+        });
+        if(count.get() > 0){
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮ck有效性检测共有" + count + "个账号失效！");
         }
     }
 }

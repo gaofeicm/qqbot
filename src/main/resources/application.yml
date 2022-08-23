@@ -4,7 +4,7 @@ spring:
   datasource:
     username: root
     password: 961120
-    url: jdbc:mysql://wo.gaofeicm.ga:15726/qqbot?useUnicode=true&characterEncoding=gbk&autoReconnect=true&failOverReadOnly=false
+    url: jdbc:mysql://127.0.0.1:15726/qqbot?useUnicode=true&characterEncoding=gbk&autoReconnect=true&failOverReadOnly=false
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
@@ -18,6 +18,10 @@ spring:
       minimum-idle: 10
 mybatis-plus:
   mapper-locations: classpath*:com/gaofeicm/qqbot/dao/*Mapper.xml
-serviceAddress: ws://127.0.0.1:5701
+serviceAddress: ws://127.0.0.1:8001
 admin:
   qq: 952219232
+task:
+  cron:
+    ck:
+      checkLogin: 0 0 0/2 * * ?
