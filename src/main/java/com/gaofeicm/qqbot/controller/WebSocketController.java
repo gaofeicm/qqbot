@@ -1,6 +1,7 @@
 package com.gaofeicm.qqbot.controller;
 
 import com.gaofeicm.qqbot.system.EventManager;
+import com.gaofeicm.qqbot.utils.CommonUtils;
 import com.gaofeicm.qqbot.utils.MessageUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_6455;
@@ -12,32 +13,37 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 
+/**
+ * @author Gaofeicm
+ */
 @Component
 public class WebSocketController implements ApplicationRunner {
 
-    @Value("${serviceAddress}")
-    private String serviceAddress;
+    private static String serviceAddress;
 
-    public WebSocketClient webSocketClient() {
+    @Value("${serviceAddress}")
+    public void setServiceAddress(String serviceAddress) {
+        WebSocketController.serviceAddress = serviceAddress;
+    }
+
+    public static WebSocketClient webSocketClient() {
         try {
             WebSocketClient webSocketClient = new WebSocketClient(new URI(serviceAddress), new Draft_6455()) {
                 @Override
                 public void onOpen(ServerHandshake handshake) {
-                    //System.out.println("[websocket] 连接成功");
+                    //MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "[websocket] 建立链接=" + handshake.getHttpStatusMessage());
                 }
                 @Override
                 public void onMessage(String message) {
-                    System.out.println("[websocket] 收到消息" + message);
                     EventManager.post(message);
                 }
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
-                    //System.out.println("[websocket] 退出连接");
+                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "[websocket] 关闭链接，code：" + code + "，reason：" + reason + "，remote：" + remote);
                 }
                 @Override
                 public void onError(Exception ex) {
-                    System.out.println("[websocket] 连接错误=" + ex.getMessage());
-
+                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "运行错误=" + ex.getMessage());
                 }
             };
             webSocketClient.connect();
@@ -51,6 +57,6 @@ public class WebSocketController implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        this.webSocketClient();
+        webSocketClient();
     }
 }
