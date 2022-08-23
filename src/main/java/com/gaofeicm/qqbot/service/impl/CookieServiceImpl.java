@@ -58,6 +58,16 @@ public class CookieServiceImpl extends ServiceImpl<CookieDao, Cookie> implements
         return dao.selectOne(new QueryWrapper<Cookie>().eq("qq", qq).eq("pt_pin", CookieUtils.getPin(ck)));
     }
 
+    /***
+     * 按pin获取ck
+     * @param ck qq
+     * @return ck
+     */
+    @Override
+    public Cookie getCookieByPin(String ck) {
+        return dao.selectOne(new QueryWrapper<Cookie>().eq("pt_pin", CookieUtils.getPin(ck)));
+    }
+
     /**
      * 获取所有ck
      * param 参数集合

@@ -34,6 +34,13 @@ public interface CookieService {
      */
     Cookie getCookieByQqAndCk(String qq, String ck);
 
+    /***
+     * 按pin获取ck
+     * @param ck qq
+     * @return ck
+     */
+    Cookie getCookieByPin(String ck);
+
     /**
      * 获取所有ck
      * param 参数集合
