@@ -1,10 +1,15 @@
 package com.gaofeicm.qqbot.event.meta;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.gaofeicm.qqbot.utils.CommonUtils;
+import com.gaofeicm.qqbot.utils.MessageUtils;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+/**
+ * @author Gaofeicm
+ */
 @Component
 public class LifecycleEvent extends MetaEvent implements ApplicationRunner {
 
@@ -15,7 +20,7 @@ public class LifecycleEvent extends MetaEvent implements ApplicationRunner {
 
     @Override
     public void handle(JSONObject message) {
-        //MessageUtils.sendPrivateMsg("952219232", "机器人已上线！");
+        MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "机器人已上线！");
     }
 
     @Override
