@@ -44,9 +44,9 @@ public class CookieUtils {
         return getExpireDay(e) + "天";
     }
 
-    public static int getExpireDay(Date date){
+    public static Double getExpireDay(Date date){
         Date now = new Date();
         String day = String.format("%.2f", (double)(date.getTime() - now.getTime()) / (1000 * 3600 * 24));
-        return Integer.parseInt(day);
+        return Double.parseDouble(day);
     }
 }
