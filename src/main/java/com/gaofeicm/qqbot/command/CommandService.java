@@ -118,7 +118,7 @@ public class CommandService {
         StringBuilder msg = new StringBuilder();
         msg.append("请按下面模板完善json:\r\n");
         msg.append("addQl{\"name\":\"haxvz\",\"address\":\"http://haxvz.gaofeicm.cf:8080\",\"clientId\":\"\",\"clientSecret\":\"\",\"weigth\":\"9\",\"maxCount\":100}");
-        Command command = CommandUtils.getDefaultCommand(message.toString());
+        Command command = CommandUtils.getDefaultCommand(msg.toString());
         command.setOption("addQl");
         command.setAction("addQl");
         command.putParam("from", param.getString("to")).putParam("to", param.getString("to"));
@@ -216,7 +216,7 @@ public class CommandService {
         StringBuilder msg = new StringBuilder();
         msg.append("请按下面模板完善json:\r\n");
         msg.append("addQlCookie{\"qlId\":\"1556920808510341122\",\"cookieId\":\"1556554834355539970\"}");
-        Command command = CommandUtils.getDefaultCommand(message.toString());
+        Command command = CommandUtils.getDefaultCommand(msg.toString());
         command.setOption("addQlCookie");
         command.setAction("addQlCookie");
         command.putParam("from", param.getString("to")).putParam("to", param.getString("to"));
@@ -263,7 +263,7 @@ public class CommandService {
         StringBuilder msg = new StringBuilder();
         msg.append("请按下面模板完善json:\r\n");
         msg.append("setCookieExpDate{\"id\":\"1556554834355539970\",\"from\":\"\",\"to\":\"952219232\",\"ck\":\"\",\"month\":\"\"}");
-        Command command = CommandUtils.getDefaultCommand(message.toString());
+        Command command = CommandUtils.getDefaultCommand(msg.toString());
         command.setOption("setCookieExpDate");
         command.setAction("setCookieExpDate");
         command.putParam("from", param.getString("to")).putParam("to", param.getString("to"));
