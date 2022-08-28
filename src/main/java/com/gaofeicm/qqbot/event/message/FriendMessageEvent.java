@@ -117,6 +117,9 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             case "同步":
                 this.syncQlCookie(qq, msg);
                 break;
+            case "更新面板":
+                this.executeReturnMessage(commandService.updateQlCookieStr(new JSONObject(){{put("to", qq);}}));
+                break;
             case "设置过期时间":
                 this.executeReturnMessage(commandService.setCookieExpStr(new JSONObject(){{put("to", qq);}}));
                 break;

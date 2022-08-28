@@ -171,10 +171,10 @@ public class CommandService {
         JSONArray message = new JSONArray();
         List<Ql> qls = qlService.getQl(new HashMap<>(0));
         StringBuilder msg = new StringBuilder("----------------------------面板列表----------------------\r\n");
-        msg.append("序号  名称     地址                                                ck数量  最大数量  权重\r\n");
+        msg.append("序号  id                   名称     地址                                                ck数量  最大数量  权重\r\n");
         for (int i = 0; i < qls.size(); i++) {
             Ql ql = qls.get(i);
-            msg.append(i + 1).append("       ").append(ql.getName()).append("   ").append(ql.getAddress()).append("    ").append(ql.getCookieCount()).append("         ").append(ql.getMaxCount()).append("       ").append(ql.getWeigth()).append("\r\n");
+            msg.append(i + 1).append("       ").append(ql.getId()).append("           ").append(ql.getName()).append("   ").append(ql.getAddress()).append("    ").append(ql.getCookieCount()).append("         ").append(ql.getMaxCount()).append("       ").append(ql.getWeigth()).append("\r\n");
         }
         message.add(new JSONObject(){{
             put("to", param.getString("to"));
@@ -244,6 +244,52 @@ public class CommandService {
             msg.append("添加成功！面板与账号映射的id为：" + qlCookie.getId());
         }else{
             msg.append("添加失败！请查看日志！");
+        }
+        message.add(new JSONObject(){{
+            put("to", param.getString("to"));
+            put("msg", msg.toString());
+        }});
+        param.put("message", message);
+        return param;
+    }
+
+    public JSONObject updateQlCookieStr(JSONObject param){
+        JSONObject ql = this.findQl(param);
+        com.alibaba.fastjson2.JSONArray message = ql.getJSONArray("message");
+        message.add(new JSONObject(){{
+            put("to", param.getString("to"));
+            put("msg", "请按下面模板输入要更新的面板id:\r\nupdateQlCookie:xxxx");
+        }});
+        ql.put("message", message);
+        Command command = CommandUtils.getDefaultCommand("请输入要更新的面板id:");
+        command.setOption("updateQlCookie");
+        command.setAction("updateQlCookie");
+        command.putParam("from", param.getString("to")).putParam("to", param.getString("to"));
+        CommandUtils.addCommand(param.getString("to"), command);
+        return ql;
+    }
+
+    public JSONObject updateQlCookie(JSONObject param){
+        JSONArray message = new JSONArray();
+        StringBuilder msg = new StringBuilder();
+        String m = param.getString("msg").substring(15);
+        List<Ql> qls = qlService.getQl(new HashMap<>(1){{put("id", m);}});
+        if(qls != null){
+            for (Ql ql : qls) {
+                JSONObject qlToken = CommandUtils.getQlToken(ql.getAddress() + "/open/auth/token?client_id=" + ql.getClientId() + "&client_secret=" + ql.getClientSecret());
+                if(qlToken == null){
+                    msg.append("配置有误,无法获取登录凭证!");
+                }else{
+                    ql.setTokeType(qlToken.getString("token_type"));
+                    ql.setToken(qlToken.getString("token"));
+                    int i = qlService.saveQl(ql);
+                    if(i > 0){
+                        msg.append("更新成功！青龙面板的名称为：" + ql.getName());
+                    }else{
+                        msg.append("添加失败！请查看日志！");
+                    }
+                }
+            }
         }
         message.add(new JSONObject(){{
             put("to", param.getString("to"));
