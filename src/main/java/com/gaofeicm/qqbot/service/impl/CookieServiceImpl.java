@@ -88,4 +88,14 @@ public class CookieServiceImpl extends ServiceImpl<CookieDao, Cookie> implements
     public List<Map<String, Object>> getAvailableCookie() {
         return dao.getAvailableCookie();
     }
+
+    /**
+     * 查询过期已启用的ck
+     * @return ck集合
+     */
+    @Override
+    public List<Map<String, Object>> getExpCookie() {
+        return dao.getExpCookie();
+    }
+
 }

@@ -21,4 +21,13 @@ public interface CookieDao extends BaseMapper<Cookie> {
             "join ql q on (q.id = qc.ql_id)\n" +
             "order by c.priority desc,c.create_time")
     List<Map<String, Object>> getAvailableCookie();
+
+    /**
+     * 查询过期已启用的ck
+     * @return
+     */
+    @Select("SELECT * FROM cookie c\n" +
+            "where c.expiration_time <= NOW()\n" +
+            "and c.available = '1'")
+    List<Map<String, Object>> getExpCookie();
 }

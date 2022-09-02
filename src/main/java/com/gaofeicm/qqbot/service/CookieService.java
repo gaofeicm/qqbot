@@ -54,4 +54,10 @@ public interface CookieService {
      * @return ck集合
      */
     List<Map<String, Object>> getAvailableCookie();
+
+    /**
+     * 查询过期已启用的ck
+     * @return ck集合
+     */
+    public List<Map<String, Object>> getExpCookie();
 }
