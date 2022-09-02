@@ -369,7 +369,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         JSONObject jdjs = jdService.getJdjs(ck);
         JSONObject jdzz = jdService.getJdzz(ck);
         JSONObject jdms = jdService.getJdms(ck);
-        JSONObject jdww = jdService.getJdww(ck);
+        //JSONObject jdww = jdService.getJdww(ck);
         JSONObject jdnc = jdService.getJdnc(ck);
         StringBuffer msg = new StringBuffer("【账号\uD83C\uDD94】");
         String nickName = "";
@@ -425,13 +425,13 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 msg.append("【京喜牧场】").append(v).append("枚鸡蛋\r\n");
             }
         }
-        if(jdww != null && jdww.getBooleanValue("success")){
+        /*if(jdww != null && jdww.getBooleanValue("success")){
             int v = jdww.getIntValue("level");
             msg.append("【汪汪乐园】汪汪等级:").append(v).append("级\r\n");
         }else{
             String v = jdww.getString("errMsg");
             msg.append("【汪汪乐园】").append(v).append("\r\n");
-        }
+        }*/
         if(jdnc != null && jdnc.getString("JdFarmProdName") != null){
             msg.append("【东东农场】");
             int treeState = jdnc.getIntValue("treeState");
