@@ -57,4 +57,11 @@ public class Command {
         param.put(key, value);
         return this;
     }
+
+    public Object getParamValue(String key) {
+        if(param != null){
+            return this.param.get(key);
+        }
+        return null;
+    }
 }
