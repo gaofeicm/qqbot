@@ -19,6 +19,7 @@ spring:
 mybatis-plus:
   mapper-locations: classpath*:com/gaofeicm/qqbot/dao/*Mapper.xml
 serviceAddress: ws://127.0.0.1:8001
+maiarkAddress: http://haxvz.gaofeicm.cf:2052
 admin:
   qq: 952219232
 task:
