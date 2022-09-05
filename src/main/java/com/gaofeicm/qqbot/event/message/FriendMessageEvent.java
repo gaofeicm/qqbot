@@ -7,7 +7,6 @@ import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
 import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.JdServiceImpl;
-import com.gaofeicm.qqbot.service.QlService;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -39,9 +38,6 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
     private CommandService commandService;
 
     @Resource
-    private QlService qlService;
-
-    @Resource
     private JdServiceImpl jdService;
 
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -64,12 +60,23 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             cmd.putParam("msg", msg);
             int index = CommonUtils.indexOf(msg, cmd.getOption());
             if(index > -1){
-                JSONObject obj = (JSONObject) SpringUtils.invokeMethod(SpringUtils.getBean(cmd.getBean()), cmd.getAction().get(index).toString(), new Class[]{JSONObject.class}, cmd.getParam());
-                this.executeReturnMessage(obj);
-                cmds.remove(cmd);
-                return;
+                Object createTime = cmd.getParamValue("createTime");
+                if(createTime != null && System.currentTimeMillis() - (long) createTime > 120 * 1000L && !qq.equals(CommonUtils.getAdminQq())){
+                    cmds.remove(cmd);
+                }else {
+                    JSONObject obj = (JSONObject) SpringUtils.invokeMethod(SpringUtils.getBean(cmd.getBean()), cmd.getAction().get(index).toString(), new Class[]{JSONObject.class}, cmd.getParam());
+                    this.executeReturnMessage(obj);
+                    if(obj.getBooleanValue("removeCmd", true)){
+                        cmds.remove(cmd);
+                    }
+                    JSONObject beforeMsg = obj.getJSONObject("beforeMsg");
+                    if(beforeMsg != null){
+                        this.handle(beforeMsg);
+                    }
+                    return;
+                }
             }else{
-                if("取消当前待办".equals(msg)){
+                if("取消".equals(msg)){
                     cmds.remove(cmd);
                     MessageUtils.sendPrivateMsg(qq, "任务已取消！");
                     return;
@@ -116,6 +123,10 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 break;
             case "同步":
                 this.syncQlCookie(qq, msg);
+                break;
+            case "登陆":
+            case "登录":
+                this.loginStr(qq);
                 break;
             case "更新面板":
                 this.executeReturnMessage(commandService.updateQlCookieStr(new JSONObject(){{put("to", qq);}}));
@@ -166,12 +177,16 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             default:
                 MessageUtils.sendPrivateMsg(qq, "我只是个笨蛋机器人，你说的话我还不会接。不要连续发我听不懂的话，发多了我不理你了！");
         }
-
     }
 
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-        super.register(this);
+    private void loginStr(String qq){
+        StringBuilder message = new StringBuilder("傻妞为您服务，请在120秒内输入11位手机号码：");
+        Command command = CommandUtils.getDefaultCommand(message.toString());
+        command.setOption("1");
+        command.setAction("getSmsCode");
+        command.putParam("from", qq).putParam("to", qq).putParam("createTime", System.currentTimeMillis());
+        CommandUtils.addCommand(qq, command);
+        MessageUtils.sendPrivateMsg(qq, message.toString());
     }
 
     /**
@@ -501,6 +516,11 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         sb.append("舔狗日记 | 获取舔狗日记\r\n");
         sb.append("新闻 | 获取时事新闻\r\n");
         return sb.toString();
+    }
+
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        super.register(this);
     }
 
     public Map<String, String> getQlHeader(Map<String, Object> map){

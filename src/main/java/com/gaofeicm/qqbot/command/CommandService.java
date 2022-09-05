@@ -9,9 +9,8 @@ import com.gaofeicm.qqbot.entity.QlCookie;
 import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.QlCookieService;
 import com.gaofeicm.qqbot.service.QlService;
-import com.gaofeicm.qqbot.utils.CommandUtils;
-import com.gaofeicm.qqbot.utils.CommonUtils;
-import com.gaofeicm.qqbot.utils.CookieUtils;
+import com.gaofeicm.qqbot.utils.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -19,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Gaofeicm
@@ -34,6 +34,9 @@ public class CommandService {
 
     @Resource
     private QlCookieService qlCookieService;
+
+    @Value("${maiarkAddress}")
+    private String maiarkAddress;
 
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -299,6 +302,82 @@ public class CommandService {
         return param;
     }
 
+    public JSONObject getSmsCode(JSONObject param){
+        JSONArray message = new JSONArray();
+        StringBuilder msg = new StringBuilder();
+        String m = param.getString("msg");
+        JSONObject smsCode = this.getSmsCode(m);
+        if(smsCode != null && smsCode.getIntValue("code") == 0){
+            smsCode.fluentPut("mobile", m).remove("msg");
+            smsCode.remove("code");
+            msg.append("请在120秒内输入短信验证码，并耐心等待回复：");
+            Command command = CommandUtils.getDefaultCommand(msg.toString());
+            command.setOption("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+            command.setAction("verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode", "verifySmsCode");
+            command.putParam("from", param.getString("to")).putParam("to", param.getString("to")).putParam("smsParam", smsCode);
+            CommandUtils.addCommand(param.getString("to"), command);
+        }else{
+            msg.append(smsCode == null ? "获取短信验证码出现了错误！请使用原方法获取ck后提交！" : smsCode.getString("msg"));
+        }
+        message.add(new JSONObject(){{
+            put("to", param.getString("to"));
+            put("msg", msg.toString());
+        }});
+        param.put("message", message);
+        return param;
+    }
+
+    //验证码校验
+    public JSONObject verifySmsCode(JSONObject param) {
+        JSONArray message = new JSONArray();
+        StringBuilder msg = new StringBuilder();
+        String m = param.getString("msg");
+        JSONObject smsParam = param.getJSONObject("smsParam").fluentPut("smscode", m);
+        StringBuilder urlParam = new StringBuilder();
+        smsParam.forEach((k, v) -> {
+            urlParam.append(k).append("=").append(v).append("&");
+        });
+        JSONObject ckBySmsCode = this.getCkBySmsCode(urlParam.toString());
+        if (ckBySmsCode != null && ckBySmsCode.getIntValue("code") == 200) {
+            String ck = ckBySmsCode.getString("ck");
+            JSONObject me = new JSONObject() {{
+                put("user_id", param.getString("to"));
+                put("message", ck);
+            }};
+            param.put("beforeMsg", me);
+            msg.append("短信成功登录！");
+        } else if(ckBySmsCode != null && ckBySmsCode.getIntValue("code") == 25){
+            msg.append(ckBySmsCode.getString("msg")).append("，请重新输入正确的验证码：");
+            param.put("removeCmd", false);
+        }else{
+            msg.append("登陆失败！请检查短信验证码是否有误，如无误则服务不正常，请使用原方法获取ck后提交！");
+        }
+        message.add(new JSONObject(){{
+            put("to", param.getString("to"));
+            put("msg", msg.toString());
+        }});
+        param.put("message", message);
+        return param;
+    }
+
+    private JSONObject getCkBySmsCode(String url){
+        Map<String, String> header = this.getMaiarkHeader();
+        String s = HttpRequestUtils.doGet(maiarkAddress + "/verify?" + url, header);
+        if(s != null){
+            return JSONObject.parseObject(s);
+        }
+        return null;
+    }
+
+    private JSONObject getSmsCode(String phone){
+        Map<String, String> header = this.getMaiarkHeader();
+        String s = HttpRequestUtils.doGet(maiarkAddress + "/getsms?mobile=" + phone, header);
+        if(s != null){
+            return JSONObject.parseObject(s);
+        }
+        return null;
+    }
+
     /**
      * 设置ck过期时间
      * @param param 参数
@@ -335,6 +414,13 @@ public class CommandService {
         }else{
             return this.setCookieExpForMonth(obj);
         }
+    }
+
+    public Map<String, String> getMaiarkHeader(){
+        Map<String, String> header = new HashMap<>();
+        header.put("User-Agent", "qqbot client");
+        header.put("content-type", "application/json");
+        return header;
     }
 
 }
