@@ -464,10 +464,11 @@ public class JdServiceImpl {
         if(!checkCkSwitch){
             return;
         }
-        MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(),  SDF.format(new Date()) + "：开始检查ck有效性");
+        //MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(),  SDF.format(new Date()) + "：开始检查ck有效性");
         //先检查是否过期
         this.checkAccountExp();
         List<Cookie> cookies = cookieService.getCookie(new HashMap<>(1){{put("available", "1");}});
+        List<String> qqs = new ArrayList<>();
         AtomicInteger count = new AtomicInteger();
         cookies.forEach(cookie -> {
             JSONObject o = this.checkLogin(cookie.getCookie());
@@ -481,13 +482,14 @@ public class JdServiceImpl {
                     cookieService.saveCookie(ck);
                     MessageUtils.sendPrivateMsg(cookie.getQq(), "您的账号【" + cookie.getPtPin() + "】已过期，请重新获取！");
                     count.getAndIncrement();
+                    qqs.add(ck.getQq());
                 }else{
                     MessageUtils.sendPrivateMsg(cookie.getQq(), "账号状态未知，请联系管理员！");
                 }
             }
         });
         if(count.get() > 0){
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮ck有效性检测共有" + count + "个账号失效！");
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮ck有效性检测共有" + count + "个账号失效！分别为：\r\n" + String.join("，", qqs));
         }
     }
 
@@ -496,6 +498,7 @@ public class JdServiceImpl {
      */
     private void checkAccountExp(){
         List<Map<String, Object>> cookies = cookieService.getExpCookie();
+        List<String> qqs = new ArrayList<>();
         AtomicInteger count = new AtomicInteger();
         cookies.forEach(cookie -> {
             Cookie ck = new Cookie();
@@ -504,9 +507,10 @@ public class JdServiceImpl {
             cookieService.saveCookie(ck);
             MessageUtils.sendPrivateMsg(cookie.get("qq").toString(), "您的代挂服务已到期，请重新续费后再次使用！");
             count.getAndIncrement();
+            qqs.add(ck.getQq());
         });
         if(count.get() > 0){
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮服务有效性检测共有" + count + "个账号失效！");
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮服务有效性检测共有" + count + "个账号失效！分别为：\r\n" + String.join("，", qqs));
         }
     }
 }
