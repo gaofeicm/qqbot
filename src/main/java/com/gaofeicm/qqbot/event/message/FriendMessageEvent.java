@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -386,6 +387,8 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         JSONObject jdms = jdService.getJdms(ck);
         //JSONObject jdww = jdService.getJdww(ck);
         JSONObject jdnc = jdService.getJdnc(ck);
+        JSONObject jdmc1 = jdService.getJdmc(ck, "energyCollect");
+        JSONObject jdmc2 = jdService.getJdmc(ck, "initPetTown");
         StringBuffer msg = new StringBuffer("【账号\uD83C\uDD94】");
         String nickName = "";
         String levelName = "";
@@ -470,9 +473,99 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 }
             }
         }
+        if(jdmc2.getIntValue("code") == 0 && jdmc2.getIntValue("resultCode") == 0 && "success".equals(jdmc2.getString("message"))){
+            JSONObject result = jdmc2.getJSONObject("result");
+            int status = result.getIntValue("petStatus");
+            JSONObject goodsInfo = result.getJSONObject("goodsInfo");
+            int resultCode = jdmc1.getIntValue("resultCode");
+            JSONObject result1 = jdmc1.getJSONObject("result");
+            if(status == 0){
+                msg.append("【东东萌宠】活动未开启!\r\n");
+            } else if (status == 5){
+                msg.append("【东东萌宠】").append(goodsInfo.getString("goodsName")).append("已可领取!\r\n");
+            } else if (status == 6){
+                msg.append("【东东萌宠】未选择物品!\r\n");
+            } else if (resultCode == 0){
+                msg.append("【东东萌宠】").append(goodsInfo.getString("goodsName")).append(result1.getString("medalPercent")).append("%,").append(result1.getString("medalNum")).append("/").append(Integer.parseInt(result1.getString("medalNum")) + Integer.parseInt(result1.getString("needCollectMedalNum"))).append("块\r\n");
+            } else{
+                msg.append("【东东萌宠】暂未选购新的商品!\r\n");
+            }
+        }
         //msg.append("【京喜工厂】").append(2399).append("枚鸡蛋\r\n");
         //msg.append("【东东萌宠】").append(2399).append("枚鸡蛋\r\n");
+        msg.append(this.getRed(ck));
         return msg.toString();
+    }
+
+    /**
+     * 获取京东红包
+     * @param ck ck
+     * @return 红包信息
+     */
+    @SneakyThrows
+    private String getRed(String ck){
+        Float jxRed = 0f;
+        Float jsRed = 0f;
+        Float jdhRed = 0f;
+        Float jdRed = 0f;
+        Float jdRedExpire = 0f;
+        Float jxRedExpire = 0f;
+        Float jsRedExpire = 0f;
+        Float jdhRedExpire = 0f;
+        JSONObject red = jdService.getRed(ck);
+        JSONObject data = red.getJSONObject("data");
+        JSONArray redList = data.getJSONObject("useRedInfo").getJSONArray("redList");
+        if(redList == null) {
+            return "";
+        }
+        String format = new SimpleDateFormat("yyyy-MM-dd 23:59:59").format(new Date());
+        Date date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(format);
+        long t = date.getTime() / 1000;
+        for (Object o : redList) {
+            JSONObject obj = (JSONObject) o;
+            String orgLimitStr = obj.getString("orgLimitStr");
+            String activityName = obj.getString("activityName");
+            float balance = obj.getFloatValue("balance");
+            long endTime = obj.getLongValue("endTime", 0);
+            if(orgLimitStr != null && orgLimitStr.contains("京喜")){
+                jxRed += balance;
+                if(endTime < t){
+                    jxRedExpire += balance;
+                }
+            } else if (orgLimitStr != null && orgLimitStr.contains("京东健康")){
+                jdhRed += balance;
+                if(endTime < t){
+                    jdhRedExpire += balance;
+                }
+            } else if (activityName != null && activityName.contains("极速版")) {
+                jsRed += balance;
+                if(endTime < t){
+                    jsRedExpire += balance;
+                }
+            } else {
+                jdRed += balance;
+                if(endTime < t){
+                    jdRedExpire += balance;
+                }
+            }
+        }
+        Float balance = data.getFloatValue("balance");
+        Float expireBalance = jxRedExpire + jsRedExpire + jdhRedExpire + jdRedExpire;
+        StringBuilder sb = new StringBuilder("\r\n\uD83E\uDDE7\uD83E\uDDE7\uD83E\uDDE7红包明细\uD83E\uDDE7\uD83E\uDDE7\uD83E\uDDE7");
+        sb.append("\r\n【红包总额】").append(new DecimalFormat("0.00").format(balance)).append("(总将过期").append(new DecimalFormat("0.00").format(expireBalance)).append(")元\r\n");
+        if(jxRed > 0){
+            sb.append("【京喜红包】" + new DecimalFormat("0.00").format(jxRed) + "(将过期" + new DecimalFormat("0.00").format(jxRedExpire) + ")元\r\n");
+        }
+        if(jsRed > 0){
+            sb.append("【极速红包】" + new DecimalFormat("0.00").format(jsRed) + "(将过期" + new DecimalFormat("0.00").format(jsRedExpire) + ")元\r\n");
+        }
+        if(jdhRed > 0){
+            sb.append("【健康红包】" + new DecimalFormat("0.00").format(jdhRed) + "(将过期" + new DecimalFormat("0.00").format(jdhRedExpire) + ")元\r\n");
+        }
+        if(jdRed > 0){
+            sb.append("【京东红包】" + new DecimalFormat("0.00").format(jdRed) + "(将过期" + new DecimalFormat("0.00").format(jdRedExpire) + ")元\r\n");
+        }
+        return sb.toString();
     }
 
     /**
