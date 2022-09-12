@@ -68,7 +68,7 @@ public class JdServiceImpl {
      */
     @SneakyThrows
     private JSONObject getJdncData1(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(2);
         header.put("Cookie", ck);
         header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
         String url = "https://api.m.jd.com/client.action?functionId=taskInitForFarm&appid=wh5&body=" + URLEncoder.encode("{\"version\":14,\"channel\":1,\"babelChannel\":\"120\"}", "UTF-8");
@@ -83,7 +83,7 @@ public class JdServiceImpl {
      */
     @SneakyThrows
     private JSONObject getJdncData2(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(13);
         header.put("Cookie", ck);
         header.put("accept", "*/*");
         header.put("accept-encoding", "gzip, deflate, br");
@@ -110,7 +110,7 @@ public class JdServiceImpl {
      */
     @SneakyThrows
     public JSONObject getJdww(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(6);
         header.put("Cookie", ck);
         header.put("Host", "api.m.jd.com");
         header.put("Content-Type", "application/x-www-form-urlencoded");
@@ -129,7 +129,7 @@ public class JdServiceImpl {
      * @return 结果
      */
     public JSONObject getJdms(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(5);
         header.put("Cookie", ck);
         header.put("origin", "https://h5.m.jd.com");
         header.put("referer", "https://h5.m.jd.com/babelDiy/Zeus/2NUvze9e1uWf4amBhe1AV6ynmSuH/index.html");
@@ -147,7 +147,7 @@ public class JdServiceImpl {
      * @return 用户信息
      */
     public JSONObject getJdzz(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(8);
         header.put("Cookie", ck);
         header.put("Host", "api.m.jd.com");
         header.put("Connection", "keep-alive");
@@ -168,7 +168,7 @@ public class JdServiceImpl {
      */
     @SneakyThrows
     public JSONObject getJdjs(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(6);
         header.put("Cookie", ck);
         header.put("Host", "api.m.jd.com");
         header.put("Accept-Language", "zh-Hans-CN;q=1, ja-CN;q=0.9");
@@ -190,7 +190,7 @@ public class JdServiceImpl {
      * @return 用户信息
      */
     public JSONObject getJxmc(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(9);
         header.put("Cookie", ck);
         header.put("Host", "m.jingxi.com");
         header.put("Connection", "keep-alive");
@@ -204,6 +204,45 @@ public class JdServiceImpl {
         url += "&h5st="+ CommonUtils.randomString(32) + "&_=" + System.currentTimeMillis() + 2 + "&sceneval=2&g_login_type=1&callback=jsonpCBK" + CommonUtils.randomString(1) + "&g_ty=ls";
         String s = HttpRequestUtils.doGet(url, header);
         s = s.substring(10, s.length() - 1);
+        return JSONObject.parseObject(s);
+    }
+
+    /**
+     * 获取用户红包数据
+     * @param ck ck
+     * @return 用户信息
+     */
+    public JSONObject getRed(String ck){
+        Map<String, String> header = new HashMap<>(8);
+        header.put("Cookie", ck);
+        header.put("Host", "m.jingxi.com");
+        header.put("Connection", "keep-alive");
+        header.put("Accept", "*/*");
+        header.put("Accept-Language", "zh-cn");
+        header.put("Accept-Encoding", "gzip, deflate, br");
+        header.put("Referer", "https://st.jingxi.com/my/redpacket.shtml?newPg=App&jxsid=16156262265849285961");
+        header.put("User-Agent", "jdpingou;iPhone;4.13.0;14.4.2;" + CommonUtils.randomString(40) + ";network/wifi;model/iPhone10,2;appBuild/100609;ADID/00000000-0000-0000-0000-000000000000;supportApplePay/1;hasUPPay/0;pushNoticeIsOpen/1;hasOCPay/0;supportBestPay/0;session/${Math.random * 98 + 1};pap/JA2019_3111789;brand/apple;supportJDSHWK/1;Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148");
+        String url = "https://m.jingxi.com/user/info/QueryUserRedEnvelopesV2?type=1&orgFlag=JD_PinGou_New&page=1&cashRedType=1&redBalanceFlag=1&channel=1&_=";
+        url += System.currentTimeMillis() + "&sceneval=2&g_login_type=1&g_ty=ls";
+        String s = HttpRequestUtils.doGet(url, header);
+        return JSONObject.parseObject(s);
+    }
+
+    /**
+     * 获取用户红京东萌宠
+     * @param ck ck
+     * @return 京东萌宠信息
+     */
+    @SneakyThrows
+    public JSONObject getJdmc(String ck, String functionId){
+        Map<String, String> header = new HashMap<>(4);
+        header.put("Cookie", ck);
+        header.put("Host", "api.m.jd.com");
+        header.put("Content-Type", "application/x-www-form-urlencoded");
+        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        String url = "https://api.m.jd.com/client.action?functionId=" + functionId;
+        String body = "body=" + URLEncoder.encode("{\"version\":\"2\",\"channel\":\"app\"", "UTF-8") + "&appid=wh5&loginWQBiz=pet-town&clientVersion=9.0.4";
+        String s = HttpRequestUtils.doPost(url, body, header);
         return JSONObject.parseObject(s);
     }
 
@@ -245,6 +284,9 @@ public class JdServiceImpl {
                         break;
                     }
                 }
+            }else{
+                flag = false;
+                break;
             }
         }
         for (Long b : todayBeans) {
@@ -273,7 +315,7 @@ public class JdServiceImpl {
      */
     @SneakyThrows
     private JSONObject getBeanData(String ck, int page){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(4);
         header.put("Cookie", ck);
         header.put("Host", "api.m.jd.com");
         header.put("Content-Type", "application/x-www-form-urlencoded");
@@ -290,7 +332,7 @@ public class JdServiceImpl {
      * @return 用户信息
      */
     public JSONObject getUserInfo1(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(8);
         header.put("Cookie", ck);
         header.put("Host", "me-api.jd.com");
         header.put("Accept", "*/*");
@@ -309,7 +351,7 @@ public class JdServiceImpl {
      * @return 用户信息
      */
     public JSONObject getUserInfo2(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(7);
         header.put("Cookie", ck);
         header.put("Host", "wxapp.m.jd.com");
         header.put("content-type", "application/x-www-form-urlencoded");
@@ -327,8 +369,13 @@ public class JdServiceImpl {
      * @param  qq qq
      * @return 检查结果
      */
+    @SneakyThrows
     public String loadCk(String ck, String qq) {
         String msg = "";
+        String pin = CookieUtils.getPin(ck);
+        pin = pin.substring(0, 7) + URLEncoder.encode(pin.substring(7, pin.length() - 1), "UTF-8") + ";";
+        String key = CookieUtils.getKey(ck);
+        ck = pin + key;
         JSONObject o = this.checkLogin(ck);
         if (o.getIntValue("islogin") == 1) {
             msg = "提交成功，账号有效！";
@@ -346,8 +393,8 @@ public class JdServiceImpl {
             cookie.setId(cookieByPin.getId());
             cookie.setQq(qq);
             cookie.setCookie(ck);
-            cookie.setPtPin(CookieUtils.getPin(ck));
-            cookie.setPtKey(CookieUtils.getKey(ck));
+            cookie.setPtPin(pin);
+            cookie.setPtKey(key);
             cookieService.saveCookie(cookie);
         }
         //判断是否添加
@@ -362,7 +409,7 @@ public class JdServiceImpl {
             cookie.setPtKey(CookieUtils.getKey(ck));
             cookieService.saveCookie(cookie);
             msg += "您是首次添加此账号，提交请求已发送给管理员，等待审核！";
-            String message = "QQ:" + qq + ",pin:" + CookieUtils.getPin(ck) + "，id:" + cookie.getId() + "，正在请求添加账号，是否同意？\r\n1.同意(一个月)\r\n2.同意(一年)\r\n3.拒绝";
+            String message = "QQ:" + qq + ",pin:" + pin + "，id:" + cookie.getId() + "，正在请求添加账号，是否同意？\r\n1.同意(一个月)\r\n2.同意(一年)\r\n3.拒绝";
             Command command = CommandUtils.getDefaultCommand(message);
             command.setOption("1", "2", "3");
             command.setAction("setCookieExpForMonth", "setCookieExpForYear", "refuseCookie");
@@ -378,7 +425,7 @@ public class JdServiceImpl {
                 cookie.setUpdateTime(new Date());
                 cookieService.saveCookie(cookie);
                 msg += "ck有效期约为30天,代挂服务时间约剩" + CookieUtils.getExpireDay(cookie);
-                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "QQ：" + cookie.getQq() + "，pin：" + CookieUtils.getPin(ck) + "更新ck成功！");
+                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "QQ：" + cookie.getQq() + "，pin：" + pin + "，更新ck成功！");
             }else{
                 msg += "您的账号已过期，请续费后重新提交!";
             }
@@ -392,7 +439,7 @@ public class JdServiceImpl {
      * @return
      */
     public JSONObject checkLogin(String ck){
-        Map<String, String> header = new HashMap<>();
+        Map<String, String> header = new HashMap<>(3);
         header.put("Cookie", ck);
         header.put("referer", "https://h5.m.jd.com/");
         header.put("User-Agent", "jdapp;iPhone;10.1.2;15.0;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
@@ -482,7 +529,7 @@ public class JdServiceImpl {
                     cookieService.saveCookie(ck);
                     MessageUtils.sendPrivateMsg(cookie.getQq(), "您的账号【" + cookie.getPtPin() + "】已过期，请重新获取！");
                     count.getAndIncrement();
-                    qqs.add(ck.getQq());
+                    qqs.add(cookie.getQq());
                 }else{
                     MessageUtils.sendPrivateMsg(cookie.getQq(), "账号状态未知，请联系管理员！");
                 }
@@ -507,7 +554,7 @@ public class JdServiceImpl {
             cookieService.saveCookie(ck);
             MessageUtils.sendPrivateMsg(cookie.get("qq").toString(), "您的代挂服务已到期，请重新续费后再次使用！");
             count.getAndIncrement();
-            qqs.add(ck.getQq());
+            qqs.add(cookie.get("qq").toString());
         });
         if(count.get() > 0){
             MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮服务有效性检测共有" + count + "个账号失效！分别为：\r\n" + String.join("，", qqs));
