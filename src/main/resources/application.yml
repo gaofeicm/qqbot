@@ -32,7 +32,7 @@ jasypt:
 serviceAddress: ws://127.0.0.1:8001
 maiarkAddress: http://127.0.0.1:2052
 admin:
-  qq: 952219232
+  qq: ENC(8vKFilpqFn1in70SYT3XjZUu1h2QLZlC)
 task:
   cron:
     ck:
