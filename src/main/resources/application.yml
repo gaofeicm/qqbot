@@ -2,9 +2,15 @@ server:
   port: 9959
 spring:
   datasource:
-    username: root
-    password: 961120
-    url: jdbc:mysql://127.0.0.1:15726/qqbot?useUnicode=true&characterEncoding=gbk&autoReconnect=true&failOverReadOnly=false
+    #username: root
+    #password: 961120
+    #url: jdbc:mysql://127.0.0.1:9959/qqbot?useUnicode=true&characterEncoding=gbk&autoReconnect=true&failOverReadOnly=false
+    #username: hayul6lqjht37c26pq5b
+    #password: pscale_pw_xASgOdSWhL92POoRynylHZN6UyL6wtPNVxuFfaNrMvP
+    #url: jdbc:mysql://ap-northeast.connect.psdb.cloud/qqbot?sslMode=VERIFY_IDENTITY
+    username: ENC(c2fAJQyW7UFzcxBBl58PAgX/7+iksVq3OEvMkSxKqs0=)
+    password: ENC(JLh3nWW+Nqt/74cx/5kA77XjyBindwSvwqsgCdJnD6/8OU2diJIu/EkWW7mtw/YxNdKf+0LtbsF1ieZ50RVq0w==)
+    url: ENC(YwBciaPuiFEoh054mc3P+iXI9c1u8PkHo2m1xSW5N9dykKqLctJPz+6/pTPZLNnF4+WkuaftwvXMW6x5AeHMak1fLnH3uNs0aI8ctBc3tO6Fh4y5Qy05GA==)
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
@@ -18,8 +24,13 @@ spring:
       minimum-idle: 10
 mybatis-plus:
   mapper-locations: classpath*:com/gaofeicm/qqbot/dao/*Mapper.xml
+jasypt:
+  encryptor:
+    password: qqbot
+    algorithm: PBEWithMD5AndDES
+    iv-generator-classname: org.jasypt.iv.NoIvGenerator
 serviceAddress: ws://127.0.0.1:8001
-maiarkAddress: http://haxvz.gaofeicm.cf:2052
+maiarkAddress: http://127.0.0.1:2052
 admin:
   qq: 952219232
 task:
