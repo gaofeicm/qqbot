@@ -141,6 +141,9 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             case "检查":
                 jdService.cronCheckCkLogin();
                 break;
+            case "余量":
+                this.checkVps(qq);
+                break;
             case "启动检查":
                 JdServiceImpl.checkCkSwitch = true;
                 break;
@@ -180,8 +183,51 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         }
     }
 
+    /**
+     * 增加余量查询
+     * @param qq qq
+     */
+    private void checkVps(String qq){
+        try {
+            StringBuilder vps = new StringBuilder("--------------------woiden--------------------\r\n");
+            StringBuilder vps1 = this.getVps("https://woiden.id/create-vps/");
+            vps.append(vps1.isEmpty() ? "无可用的服务器！\r\n" : vps1);
+            vps.append("----------------------hax----------------------\r\n");
+            StringBuilder vps2 = this.getVps("https://hax.co.id/create-vps/");
+            vps.append(vps2.isEmpty() ? "无可用的服务器！" : vps2);
+            MessageUtils.sendPrivateMsg(qq, vps.toString());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 增加余量查询
+     * @param url url
+     * @return vps
+     */
+    private StringBuilder getVps(String url){
+        String s = HttpRequestUtils.get(url);
+        StringBuilder stringBuilder = new StringBuilder("");
+        if(s == null || "".equals(s)){
+            return stringBuilder.append("未获取到源数据！");
+        }
+        int datacenter = s.indexOf("datacenter");
+        s = s.substring(datacenter);
+        int i1 = s.indexOf("-select-</option>");
+        int i2 = s.indexOf("</select>");
+        s = s.substring(i1 + 17, i2).trim();
+        while(s.contains("<option value=")){
+            int a = s.indexOf("\">");
+            int b = s.indexOf("</option>");
+            stringBuilder.append(s.substring(a + 2, b) + "\r\n");
+            s = s.substring(b + 9);
+        }
+        return stringBuilder;
+    }
+
     private void loginStr(String qq){
-        StringBuilder message = new StringBuilder("傻妞为您服务，请在120秒内输入11位手机号码：");
+        StringBuilder message = new StringBuilder("傻妞为您服务，请在120秒内输入11位手机号码（输入“取消”随时退出会话）：");
         Command command = CommandUtils.getDefaultCommand(message.toString());
         command.setOption("1");
         command.setAction("getSmsCode");
@@ -455,12 +501,12 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             int treeState = jdnc.getIntValue("treeState");
             if(jdnc.getIntValue("JdtreeEnergy") != 0){
                 if(treeState == 2 || treeState == 3){
-                    msg.append(jdnc.getString("JdFarmProdName")).append("可以兑换了!");
+                    msg.append(jdnc.getString("JdFarmProdName")).append("可以兑换了!\r\n");
                 }else{
                     if(!"Infinity".equals(jdnc.getString("JdwaterD")) && !"-Infinity".equals(jdnc.getString("JdwaterD"))){
-                        msg.append(jdnc.getString("JdFarmProdName")).append(String.format("%.2f", (jdnc.getDoubleValue("JdtreeEnergy") / jdnc.getDoubleValue("JdtreeTotalEnergy")) * 100)).append("%,").append(jdnc.getDoubleValue("JdwaterD")).append("天\r\n");
+                        msg.append(jdnc.getString("JdFarmProdName")).append(" ").append(String.format("%.2f", (jdnc.getDoubleValue("JdtreeEnergy") / jdnc.getDoubleValue("JdtreeTotalEnergy")) * 100)).append("%,").append(jdnc.getDoubleValue("JdwaterD")).append("天\r\n");
                     }else{
-                        msg.append(jdnc.getString("JdFarmProdName")).append(String.format("%.2f", (jdnc.getDoubleValue("JdtreeEnergy") / jdnc.getDoubleValue("JdtreeTotalEnergy")) * 100)).append("%\r\n");
+                        msg.append(jdnc.getString("JdFarmProdName")).append(" ").append(String.format("%.2f", (jdnc.getDoubleValue("JdtreeEnergy") / jdnc.getDoubleValue("JdtreeTotalEnergy")) * 100)).append("%\r\n");
                     }
                 }
             }else{
@@ -473,7 +519,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 }
             }
         }
-        if(jdmc2.getIntValue("code") == 0 && jdmc2.getIntValue("resultCode") == 0 && "success".equals(jdmc2.getString("message"))){
+        if(jdmc2 != null && jdmc2.getIntValue("code") == 0 && jdmc2.getIntValue("resultCode") == 0 && "success".equals(jdmc2.getString("message"))){
             JSONObject result = jdmc2.getJSONObject("result");
             int status = result.getIntValue("petStatus");
             JSONObject goodsInfo = result.getJSONObject("goodsInfo");
@@ -486,13 +532,12 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             } else if (status == 6){
                 msg.append("【东东萌宠】未选择物品!\r\n");
             } else if (resultCode == 0){
-                msg.append("【东东萌宠】").append(goodsInfo.getString("goodsName")).append(result1.getString("medalPercent")).append("%,").append(result1.getString("medalNum")).append("/").append(Integer.parseInt(result1.getString("medalNum")) + Integer.parseInt(result1.getString("needCollectMedalNum"))).append("块\r\n");
+                msg.append("【东东萌宠】").append(goodsInfo.getString("goodsName")).append(" ").append(result1.getString("medalPercent")).append("%,").append(result1.getString("medalNum")).append("/").append(Integer.parseInt(result1.getString("medalNum")) + Integer.parseInt(result1.getString("needCollectMedalNum"))).append("块\r\n");
             } else{
                 msg.append("【东东萌宠】暂未选购新的商品!\r\n");
             }
         }
         //msg.append("【京喜工厂】").append(2399).append("枚鸡蛋\r\n");
-        //msg.append("【东东萌宠】").append(2399).append("枚鸡蛋\r\n");
         msg.append(this.getRed(ck));
         return msg.toString();
     }
@@ -529,22 +574,22 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             long endTime = obj.getLongValue("endTime", 0);
             if(orgLimitStr != null && orgLimitStr.contains("京喜")){
                 jxRed += balance;
-                if(endTime < t){
+                if(endTime <= t){
                     jxRedExpire += balance;
                 }
             } else if (orgLimitStr != null && orgLimitStr.contains("京东健康")){
                 jdhRed += balance;
-                if(endTime < t){
+                if(endTime <= t){
                     jdhRedExpire += balance;
                 }
             } else if (activityName != null && activityName.contains("极速版")) {
                 jsRed += balance;
-                if(endTime < t){
+                if(endTime <= t){
                     jsRedExpire += balance;
                 }
             } else {
                 jdRed += balance;
-                if(endTime < t){
+                if(endTime <= t){
                     jdRedExpire += balance;
                 }
             }
