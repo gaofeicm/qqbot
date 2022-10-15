@@ -1,12 +1,15 @@
 package com.gaofeicm.qqbot.utils;
 
+import com.alibaba.fastjson.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.servlet.http.HttpServletRequest;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 
 /**
@@ -109,5 +112,26 @@ public class CommonUtils {
         rightNow.setTime(date);
         rightNow.add(Calendar.MONTH, month);
         return rightNow.getTime();
+    }
+
+    /**
+     * 获取所有请求参数
+     * @param request HttpServletRequest请求
+     * @return 请求参数
+     */
+    public static JSONObject getAllRequestParam(HttpServletRequest request) {
+        JSONObject obj = new JSONObject();
+        Enumeration<?> temp = request.getParameterNames();
+        if (null != temp) {
+            while (temp.hasMoreElements()) {
+                String en = (String) temp.nextElement();
+                String value = request.getParameter(en);
+                //如果字段的值为空，判断若值为空，则删除这个字段>
+                if (null != value && !"".equals(value)) {
+                    obj.put(en, value);
+                }
+            }
+        }
+        return obj;
     }
 }
