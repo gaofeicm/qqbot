@@ -203,8 +203,12 @@ public class JdServiceImpl {
         String url = "https://m.jingxi.com/jxmc/queryservice/GetHomePageInfo?channel=7&sceneid=1001&activeid=null&activekey=null&isgift=1&isquerypicksite=1&_stk=channel%2Csceneid&_ste=1";
         url += "&h5st="+ CommonUtils.randomString(32) + "&_=" + System.currentTimeMillis() + 2 + "&sceneval=2&g_login_type=1&callback=jsonpCBK" + CommonUtils.randomString(1) + "&g_ty=ls";
         String s = HttpRequestUtils.doGet(url, header);
-        s = s.substring(10, s.length() - 1);
-        return JSONObject.parseObject(s);
+        if(s != null){
+            s = s.substring(10, s.length() - 1);
+            return JSONObject.parseObject(s);
+        }else{
+            return new JSONObject();
+        }
     }
 
     /**
@@ -266,7 +270,7 @@ public class JdServiceImpl {
         boolean flag = true;
         while (flag) {
             JSONObject bean = this.getBeanData(ck, page);
-            if ("0".equals(bean.getString("code"))) {
+            if (bean != null && "0".equals(bean.getString("code"))) {
                 page ++;
                 JSONArray detailList = bean.getJSONArray("detailList");
                 for (Object o : detailList) {

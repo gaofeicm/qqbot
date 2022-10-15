@@ -11,7 +11,11 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Map;
 
 public class HttpRequestUtils {
@@ -95,5 +99,25 @@ public class HttpRequestUtils {
             }
         }
         return null;
+    }
+
+    @SneakyThrows
+    public static String get(String url){
+        URL realUrl = new URL(url);
+        HttpURLConnection conn = (HttpURLConnection) realUrl.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setDoInput(true);
+        conn.setDoOutput(false);
+        conn.setUseCaches(false);
+        conn.setRequestProperty("Connection", "close");
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+        StringBuffer sb = new StringBuffer();
+        String line = "";
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+        return sb.toString();
     }
 }
