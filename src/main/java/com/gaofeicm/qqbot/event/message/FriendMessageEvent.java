@@ -7,6 +7,7 @@ import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
 import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.JdServiceImpl;
+import com.gaofeicm.qqbot.service.RemoteQlServiceImpl;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -19,7 +20,6 @@ import javax.annotation.Resource;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +37,9 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
 
     @Resource
     private CommandService commandService;
+
+    @Resource
+    private RemoteQlServiceImpl remoteQlService;
 
     @Resource
     private JdServiceImpl jdService;
@@ -109,7 +112,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 m.append("id  QQ                  pin                              启用    到期时间\r\n");
                 for (int i = 0; i < cookies.size(); i++) {
                     Cookie cookie = cookies.get(i);
-                    m.append(cookie.getId()).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append((boolean)cookie.getAvailable() ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
+                    m.append(cookie.getId()).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append(cookie.getAvailable() == 1 ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
                 }
             }
             MessageUtils.sendPrivateMsg(qq, m.toString());
@@ -123,7 +126,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 MessageUtils.sendPrivateMsg(qq, this.getMenuStr());
                 break;
             case "同步":
-                this.syncQlCookie(qq, msg);
+                remoteQlService.syncQlCookie(qq, msg);
                 break;
             case "登陆":
             case "登录":
@@ -278,111 +281,6 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         MessageUtils.sendPrivateMsg(qq, message.toString());
     }
 
-    private void syncQlCookie(String qq, String mag){
-        if(!qq.equals(CommonUtils.getAdminQq())){
-            return;
-        }
-        List<Map<String, Object>> cks = cookieService.getAvailableCookie();
-        Map<String, Map<String, Object>> qls = new HashMap<>();
-        Map<String, JSONArray> tck = new HashMap<>();
-        for (Map<String, Object> ck : cks) {
-            String name = ck.get("name").toString();
-            if(tck.get(name) == null){
-                tck.put(name, new JSONArray());
-            }
-            if(qls.get(name) == null){
-                qls.put(name, new HashMap<>(){{
-                    put("name", ck.get("name"));
-                    put("address", ck.get("address"));
-                    put("token", ck.get("token"));
-                    put("tokenType", ck.get("tokenType"));
-                }});
-            }
-            tck.get(name).add(new HashMap<>(3){{
-                put("value", ck.get("cookie"));
-                put("name", "JD_COOKIE");
-                put("remarks", ck.get("qq"));
-            }});
-        }
-        StringBuilder sb = new StringBuilder();
-        tck.forEach((s, list) -> {
-            this.deleteQlOriginalData(qls.get(s));
-            this.addQlOriginalData(qls.get(s), list);
-            sb.append("面板名称：").append(qls.get(s).get("name")).append("，拥有").append(list.size()).append("条ck\r\n");
-        });
-        MessageUtils.sendPrivateMsg(qq, "同步完成\r\n" + sb.toString());
-    }
-
-    /**
-     * 添加面板原始数据
-     * @param map map
-     * @param list list
-     */
-    private void addQlOriginalData(Map<String, Object> map, JSONArray list){
-        try{
-            Map<String, String> header = this.getQlHeader(map);
-            String body = list.toJSONString();
-            String s = HttpRequestUtils.doPost(map.get("address") + "/open/envs?t=" + System.currentTimeMillis(), body, header);
-            if (s != null) {
-                JSONObject jsonObject = JSONObject.parseObject(s);
-                if (!"200".equals(jsonObject.getString("code"))) {
-                    throw new RuntimeException("code为" + jsonObject.getString("code"));
-                }
-            }else{
-                throw new RuntimeException("添加面板原始数据返回值为null");
-            }
-        }catch (Exception e){
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "添加原始数据出现了异常！" + map.toString() + e.getMessage());
-            throw e;
-        }
-    }
-
-    /**
-     * 删除面板原始数据
-     * @param map map
-     */
-    private void deleteQlOriginalData(Map<String, Object> map){
-        try{
-            JSONArray qlData = this.getQlData(map);
-            JSONArray ids = new JSONArray();
-            for (Object data : qlData) {
-                JSONObject jsonObject = JSONObject.parseObject(data.toString());
-                ids.add(jsonObject.getString("id"));
-            }
-            if(!ids.isEmpty()) {
-                Map<String, String> header = this.getQlHeader(map);
-                String s = HttpRequestUtils.doDelete(map.get("address") + "/open/envs?&t=" + System.currentTimeMillis(), ids.toJSONString(), header);
-                if (s != null) {
-                    JSONObject jsonObject = JSONObject.parseObject(s);
-                    if (!"200".equals(jsonObject.getString("code"))) {
-                        throw new RuntimeException();
-                    }
-                }else{
-                    throw new RuntimeException("删除面板原始数据返回值为null");
-                }
-            }
-        }catch (Exception e){
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "删除原始数据出现了异常！" + map.toString() + e.getMessage());
-            throw e;
-        }
-    }
-
-    /**
-     * 获取青龙数据
-     * @param map map
-     * @return array
-     */
-    private JSONArray getQlData(Map<String, Object> map){
-        Map<String, String> header = this.getQlHeader(map);
-        String s = HttpRequestUtils.doGet(map.get("address") + "/open/envs?searchValue=&t=" + System.currentTimeMillis(), header);
-        if(s != null){
-            return JSONObject.parseObject(s).getJSONArray("data");
-        }else{
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "获取青龙面板数据出现了异常！" + map.get("address"));
-            throw new RuntimeException();
-        }
-    }
-
     /**
      * 获取用户信息
      * @param qq qq
@@ -395,9 +293,9 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             return;
         }
         long t = System.currentTimeMillis();
-        List<Cookie> availableCookies = cookies.stream().filter(cookie -> (boolean) cookie.getAvailable() && cookie.getExpirationTime().getTime() > t).collect(Collectors.toList());
+        List<Cookie> availableCookies = cookies.stream().filter(cookie -> cookie.getAvailable() == 1 && cookie.getExpirationTime().getTime() > t).collect(Collectors.toList());
         long count1 = availableCookies.size();
-        long count2 = cookies.stream().filter(cookie -> !(boolean) cookie.getAvailable() || cookie.getExpirationTime().getTime() <= t).count();
+        long count2 = cookies.stream().filter(cookie -> cookie.getAvailable() != 1 || cookie.getExpirationTime().getTime() <= t).count();
         StringBuilder m = new StringBuilder("执行查询命令，您总共有").append(cookies.size()).append("个账号");
         if(count1 > 0 && count2 > 0){
             m.append("，").append(count1).append("个有效账号，").append(count2).append("个失效账号！\r\n");
@@ -459,7 +357,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 couponNum = assetInfo.getString("couponNum");
             }
         }
-        if(userInfo2.getJSONObject("user") != null){
+        if(userInfo2 != null && userInfo2.getJSONObject("user") != null){
             jingXiang = userInfo2.getJSONObject("user").getString("uclass");
         }
         msg.append(nickName).append("\r\n");
@@ -659,14 +557,6 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
     @Override
     public void run(ApplicationArguments args) throws Exception {
         super.register(this);
-    }
-
-    public Map<String, String> getQlHeader(Map<String, Object> map){
-        Map<String, String> header = new HashMap<>();
-        header.put("Authorization", map.get("tokenType") + " " + map.get("token"));
-        header.put("User-Agent", "qqbot client");
-        header.put("content-type", "application/json");
-        return header;
     }
 
     /**
