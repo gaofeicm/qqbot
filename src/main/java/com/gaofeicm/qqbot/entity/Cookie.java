@@ -22,8 +22,11 @@ public class Cookie implements Serializable {
     
     @Generated
     private String id;
-    
-        
+
+
+    @TableField("oid")
+    private String oid;
+
     @TableField("priority")
     private Integer priority;
         
@@ -37,7 +40,7 @@ public class Cookie implements Serializable {
         
         
     @TableField("available")
-    private Object available;
+    private Integer available;
         
         
     @TableField("create_time")
