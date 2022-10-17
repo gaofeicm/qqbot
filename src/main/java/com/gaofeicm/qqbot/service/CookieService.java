@@ -59,5 +59,20 @@ public interface CookieService {
      * 查询过期已启用的ck
      * @return ck集合
      */
-    public List<Map<String, Object>> getExpCookie();
+    List<Map<String, Object>> getExpCookie();
+
+    /**
+     * 按id更新oid
+     * @param id id
+     * @param oid oid
+     * @return 操作结果
+     */
+    int updateCookieOidById(String id, String oid);
+
+    /**
+     * 查询cookie及面板信息
+     * @param id id
+     * @return cks cks
+     */
+    Map<String, Object> getCookieById(String id);
 }

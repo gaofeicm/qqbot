@@ -1,6 +1,7 @@
 package com.gaofeicm.qqbot.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gaofeicm.qqbot.dao.CookieDao;
 import com.gaofeicm.qqbot.entity.Cookie;
@@ -96,6 +97,29 @@ public class CookieServiceImpl extends ServiceImpl<CookieDao, Cookie> implements
     @Override
     public List<Map<String, Object>> getExpCookie() {
         return dao.getExpCookie();
+    }
+
+    /**
+     * 按QQ更新oid
+     * @param id id
+     * @param oid oid
+     * @return 操作结果
+     */
+    public int updateCookieOidById(String id, String oid) {
+        Cookie cookie = new Cookie();
+        cookie.setOid(oid);
+        return dao.update(cookie, new UpdateWrapper<Cookie>().eq("id", id));
+    }
+
+    /**
+     * 查询cookie及面板信息
+     *
+     * @param id id
+     * @return cks cks
+     */
+    @Override
+    public Map<String, Object> getCookieById(String id) {
+        return dao.getCookieById(id);
     }
 
 }
