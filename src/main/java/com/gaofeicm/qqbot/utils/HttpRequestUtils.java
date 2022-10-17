@@ -58,6 +58,13 @@ public class HttpRequestUtils {
         return doRequest(http, header);
     }
 
+    @SneakyThrows
+    public static String doPut(String url, String jsonStr, Map<String, String> header) {
+        HttpPut http = new HttpPut(url);
+        http.setEntity(new StringEntity(jsonStr));
+        return doRequest(http, header);
+    }
+
     public static String doRequest(HttpRequestBase http, Map<String, String> header) {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         http.setHeader("Content-type", "application/json");

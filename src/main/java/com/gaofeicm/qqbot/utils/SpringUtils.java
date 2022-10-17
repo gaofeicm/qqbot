@@ -57,7 +57,7 @@ public class SpringUtils implements ApplicationContextAware {
     }
 
     /**
-     * 放射调用SpringBean容器内对象方法
+     * 反射调用SpringBean容器内对象方法
      * @param beanObject Bean对象
      * @param methodName 方法名
      * @param parameterTypes 参数类型

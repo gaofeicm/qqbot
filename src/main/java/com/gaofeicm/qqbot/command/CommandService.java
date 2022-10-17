@@ -9,6 +9,7 @@ import com.gaofeicm.qqbot.entity.QlCookie;
 import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.QlCookieService;
 import com.gaofeicm.qqbot.service.QlService;
+import com.gaofeicm.qqbot.service.RemoteQlServiceImpl;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,9 @@ public class CommandService {
 
     @Resource
     private QlService qlService;
+
+    @Resource
+    private RemoteQlServiceImpl remoteQlService;
 
     @Resource
     private QlCookieService qlCookieService;
@@ -200,7 +204,7 @@ public class CommandService {
         msg.append("序号  QQ                  pin                              启用    到期时间\r\n");
         for (int i = 0; i < cookies.size(); i++) {
             Cookie cookie = cookies.get(i);
-            msg.append(i + 1).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append((boolean)cookie.getAvailable() ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
+            msg.append(i + 1).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append(cookie.getAvailable() == 1 ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
         }
         message.add(new JSONObject(){{
             put("to", param.getString("to"));
@@ -246,6 +250,14 @@ public class CommandService {
         int i = qlCookieService.saveQlCookie(qlCookie);
         if(i > 0){
             msg.append("添加成功！面板与账号映射的id为：" + qlCookie.getId());
+            //添加至青龙面板
+            Map<String, Object> map = cookieService.getCookieById(qlCookie.getCookieId());
+            JSONObject value = new JSONObject(3) {{
+                put("value", map.get("cookie"));
+                put("name", "JD_COOKIE");
+                put("remarks", map.get("qq") + "-" + map.get("cid"));
+            }};
+            remoteQlService.addQlOriginalData(map, new com.alibaba.fastjson2.JSONArray(){{add(value);}});
         }else{
             msg.append("添加失败！请查看日志！");
         }
@@ -290,7 +302,7 @@ public class CommandService {
                     if(i > 0){
                         msg.append("更新成功！青龙面板的名称为：" + ql.getName());
                     }else{
-                        msg.append("添加失败！请查看日志！");
+                        msg.append("更新失败！请查看日志！");
                     }
                 }
             }
