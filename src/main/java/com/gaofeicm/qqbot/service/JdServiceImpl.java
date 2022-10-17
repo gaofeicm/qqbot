@@ -29,6 +29,8 @@ public class JdServiceImpl {
     @Resource
     private CookieService cookieService;
 
+    @Resource
+    private RemoteQlServiceImpl remoteQlService;
     public static boolean checkCkSwitch = true;
 
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -429,7 +431,9 @@ public class JdServiceImpl {
                 cookie.setUpdateTime(new Date());
                 cookieService.saveCookie(cookie);
                 msg += "ck有效期约为30天,代挂服务时间约剩" + CookieUtils.getExpireDay(cookie);
-                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "QQ：" + cookie.getQq() + "，pin：" + pin + "，更新ck成功！");
+                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "QQ：" + cookie.getQq() + "，pin：" + pin + "，更新ck成功！开始同步至对应面板！");
+                //同步至面板
+                remoteQlService.updateQlOriginalData(cookie.getId());
             }else{
                 msg += "您的账号已过期，请续费后重新提交!";
             }
