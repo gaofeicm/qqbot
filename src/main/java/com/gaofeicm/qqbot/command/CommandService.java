@@ -258,6 +258,7 @@ public class CommandService {
                 put("remarks", map.get("qq") + "-" + map.get("cid"));
             }};
             remoteQlService.addQlOriginalData(map, new com.alibaba.fastjson2.JSONArray(){{add(value);}});
+            msg.append("已将账号同步至远程青龙面板！");
         }else{
             msg.append("添加失败！请查看日志！");
         }
