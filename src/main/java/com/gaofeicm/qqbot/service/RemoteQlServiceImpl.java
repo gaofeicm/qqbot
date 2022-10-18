@@ -181,6 +181,8 @@ public class RemoteQlServiceImpl {
                                 }
                             }
                         }
+                    }else{
+                        MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "添加ck到远程时返回的状态码为200，但是未返回值，请查看日志排查！");
                     }
                 }
             } else {
