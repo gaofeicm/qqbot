@@ -2,12 +2,13 @@ package com.gaofeicm.qqbot.event.message;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.gaofeicm.qqbot.biz.JpkServiceImpl;
 import com.gaofeicm.qqbot.command.CommandService;
 import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
 import com.gaofeicm.qqbot.service.CookieService;
-import com.gaofeicm.qqbot.service.JdServiceImpl;
-import com.gaofeicm.qqbot.service.RemoteQlServiceImpl;
+import com.gaofeicm.qqbot.biz.JdServiceImpl;
+import com.gaofeicm.qqbot.biz.RemoteQlServiceImpl;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -40,6 +41,9 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
 
     @Resource
     private RemoteQlServiceImpl remoteQlService;
+
+    @Resource
+    private JpkServiceImpl jpkService;
 
     @Resource
     private JdServiceImpl jdService;
@@ -194,7 +198,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         try {
             StringBuilder vps = new StringBuilder("--------------------woiden--------------------\r\n");
             StringBuilder vps1 = this.getVps("https://woiden.id/create-vps/");
-            vps.append(vps1.isEmpty() ? "无可用的服务器！\r\n" : vps1);
+            vps.append(vps1.isEmpty() ? "无可用的服务器！\r\n\r\n" : vps1 + "\r\n\r\n");
             vps.append("----------------------hax----------------------\r\n");
             StringBuilder vps2 = this.getVps("https://hax.co.id/create-vps/");
             vps.append(vps2.isEmpty() ? "无可用的服务器！" : vps2);
@@ -210,12 +214,15 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
      * @return vps
      */
     private StringBuilder getVps(String url){
-        String s = HttpRequestUtils.get(url);
+        String s = HttpRequestUtils.post(url);
         StringBuilder stringBuilder = new StringBuilder("");
         if(s == null || "".equals(s)){
             return stringBuilder.append("未获取到源数据！");
         }
         int datacenter = s.indexOf("datacenter");
+        if (datacenter < 0) {
+            return stringBuilder.append("未获取到源数据！");
+        }
         s = s.substring(datacenter);
         int i1 = s.indexOf("-select-</option>");
         int i2 = s.indexOf("</select>");
@@ -456,8 +463,18 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         Float jsRedExpire = 0f;
         Float jdhRedExpire = 0f;
         JSONObject red = jdService.getRed(ck);
+        if(red == null){
+            return "";
+        }
         JSONObject data = red.getJSONObject("data");
-        JSONArray redList = data.getJSONObject("useRedInfo").getJSONArray("redList");
+        if(data == null){
+            return "";
+        }
+        JSONObject useRedInfo = data.getJSONObject("useRedInfo");
+        if(useRedInfo == null){
+            return "";
+        }
+        JSONArray redList = useRedInfo.getJSONArray("redList");
         if(redList == null) {
             return "";
         }
