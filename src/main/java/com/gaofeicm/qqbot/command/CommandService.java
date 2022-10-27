@@ -9,7 +9,7 @@ import com.gaofeicm.qqbot.entity.QlCookie;
 import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.QlCookieService;
 import com.gaofeicm.qqbot.service.QlService;
-import com.gaofeicm.qqbot.service.RemoteQlServiceImpl;
+import com.gaofeicm.qqbot.biz.RemoteQlServiceImpl;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,9 +1,11 @@
-package com.gaofeicm.qqbot.service;
+package com.gaofeicm.qqbot.biz;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.gaofeicm.qqbot.entity.Ql;
+import com.gaofeicm.qqbot.service.CookieService;
+import com.gaofeicm.qqbot.service.QlService;
 import com.gaofeicm.qqbot.utils.CommandUtils;
 import com.gaofeicm.qqbot.utils.CommonUtils;
 import com.gaofeicm.qqbot.utils.HttpRequestUtils;

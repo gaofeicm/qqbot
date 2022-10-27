@@ -1,10 +1,11 @@
-package com.gaofeicm.qqbot.service;
+package com.gaofeicm.qqbot.biz;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
+import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -47,11 +48,11 @@ public class JdServiceImpl {
         JSONObject jdncData2 = this.getJdncData2(ck);
         JSONObject farmUserPro = jdncData2.getJSONObject("farmUserPro");
         if(farmUserPro != null){
-            int waterEveryDayT = jdncData1.getJSONObject("totalWaterTaskInit").getIntValue("totalWaterTaskTimes");
-            int waterTotalT = farmUserPro.getIntValue("treeTotalEnergy") - farmUserPro.getIntValue("treeEnergy") - farmUserPro.getIntValue("totalEnergy ") / 10;
+            double waterEveryDayT = jdncData1.getJSONObject("totalWaterTaskInit").getDoubleValue("totalWaterTaskTimes");
+            double waterTotalT = (farmUserPro.getIntValue("treeTotalEnergy") - farmUserPro.getIntValue("treeEnergy") - farmUserPro.getIntValue("totalEnergy ")) / 10d;
             double waterD = 0D;
             if(waterEveryDayT != 0){
-                waterD = Math.ceil(waterTotalT / waterEveryDayT);
+                waterD = Double.parseDouble(String.format("%.2f", (waterTotalT / waterEveryDayT)));
             }
             map.put("JdFarmProdName", farmUserPro.getString("name"));
             map.put("JdtreeEnergy", farmUserPro.getString("treeEnergy"));
@@ -72,7 +73,7 @@ public class JdServiceImpl {
     private JSONObject getJdncData1(String ck){
         Map<String, String> header = new HashMap<>(2);
         header.put("Cookie", ck);
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?functionId=taskInitForFarm&appid=wh5&body=" + URLEncoder.encode("{\"version\":14,\"channel\":1,\"babelChannel\":\"120\"}", "UTF-8");
         String s = HttpRequestUtils.doGet(url, header);
         return JSONObject.parseObject(s);
@@ -98,7 +99,7 @@ public class JdServiceImpl {
         header.put("sec-fetch-mode", "cors");
         header.put("sec-fetch-site", "same-site");
         header.put("Content-Type", "application/x-www-form-urlencoded");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?functionId=initForFarm";
         String body = "body=" + URLEncoder.encode("{ \"version\": 4 }", "UTF-8") + "&appid=wh5&clientVersion=9.1.0";
         String s = HttpRequestUtils.doPost(url, body, header);
@@ -118,7 +119,7 @@ public class JdServiceImpl {
         header.put("Content-Type", "application/x-www-form-urlencoded");
         header.put("Origin", "https://joypark.jd.com");
         header.put("Referer", "https://joypark.jd.com/?activityId=LsQNxL7iWDlXUs6cFl-AAg&lng=113.387899&lat=22.512678&sid=4d76080a9da10fbb31f5cd43396ed6cw&un_area=19_1657_52093_0");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?functionId=joyBaseInfo";
         String body = "body=" + URLEncoder.encode("{\"taskId\":\"\",\"inviteType\":\"\",\"inviterPin\":\"\",\"linkId\":\"LsQNxL7iWDlXUs6cFl-AAg\"}", "UTF-8") + "&appid=activities_platform";
         String s = HttpRequestUtils.doPost(url, body, header);
@@ -136,7 +137,7 @@ public class JdServiceImpl {
         header.put("origin", "https://h5.m.jd.com");
         header.put("referer", "https://h5.m.jd.com/babelDiy/Zeus/2NUvze9e1uWf4amBhe1AV6ynmSuH/index.html");
         header.put("Content-Type", "application/x-www-form-urlencoded");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?appid=SecKill2020";
         String body = "functionId=homePageV2&body=&client=wh5&clientVersion=1.0.0";
         String s = HttpRequestUtils.doPost(url, body, header);
@@ -157,7 +158,7 @@ public class JdServiceImpl {
         header.put("Accept-Language", "zh-cn");
         header.put("Accept-Encoding", "gzip, deflate, br");
         header.put("Referer", "http://wq.jd.com/wxapp/pages/hd-interaction/index/index");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?functionId=interactTaskIndex&body=&client=wh5&clientVersion=9.1.0";
         String s = HttpRequestUtils.doGet(url, header);
         return JSONObject.parseObject(s);
@@ -201,7 +202,7 @@ public class JdServiceImpl {
         header.put("Accept-Encoding", "gzip, deflate, br");
         header.put("Referer", "https://st.jingxi.com/pingou/jxmc/index.html");
         header.put("Origin", "https://st.jingxi.com");
-        header.put("User-Agent", "jdpingou;iPhone;4.13.0;14.4.2;" + CommonUtils.randomString(40) + ";network/wifi;model/iPhone10,2;appBuild/100609;ADID/00000000-0000-0000-0000-000000000000;supportApplePay/1;hasUPPay/0;pushNoticeIsOpen/1;hasOCPay/0;supportBestPay/0;session/${Math.random * 98 + 1};pap/JA2019_3111789;brand/apple;supportJDSHWK/1;Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148");
+        header.put("User-Agent", this.getAgent());
         String url = "https://m.jingxi.com/jxmc/queryservice/GetHomePageInfo?channel=7&sceneid=1001&activeid=null&activekey=null&isgift=1&isquerypicksite=1&_stk=channel%2Csceneid&_ste=1";
         url += "&h5st="+ CommonUtils.randomString(32) + "&_=" + System.currentTimeMillis() + 2 + "&sceneval=2&g_login_type=1&callback=jsonpCBK" + CommonUtils.randomString(1) + "&g_ty=ls";
         String s = HttpRequestUtils.doGet(url, header);
@@ -227,7 +228,7 @@ public class JdServiceImpl {
         header.put("Accept-Language", "zh-cn");
         header.put("Accept-Encoding", "gzip, deflate, br");
         header.put("Referer", "https://st.jingxi.com/my/redpacket.shtml?newPg=App&jxsid=16156262265849285961");
-        header.put("User-Agent", "jdpingou;iPhone;4.13.0;14.4.2;" + CommonUtils.randomString(40) + ";network/wifi;model/iPhone10,2;appBuild/100609;ADID/00000000-0000-0000-0000-000000000000;supportApplePay/1;hasUPPay/0;pushNoticeIsOpen/1;hasOCPay/0;supportBestPay/0;session/${Math.random * 98 + 1};pap/JA2019_3111789;brand/apple;supportJDSHWK/1;Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148");
+        header.put("User-Agent", this.getAgent());
         String url = "https://m.jingxi.com/user/info/QueryUserRedEnvelopesV2?type=1&orgFlag=JD_PinGou_New&page=1&cashRedType=1&redBalanceFlag=1&channel=1&_=";
         url += System.currentTimeMillis() + "&sceneval=2&g_login_type=1&g_ty=ls";
         String s = HttpRequestUtils.doGet(url, header);
@@ -245,7 +246,7 @@ public class JdServiceImpl {
         header.put("Cookie", ck);
         header.put("Host", "api.m.jd.com");
         header.put("Content-Type", "application/x-www-form-urlencoded");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?functionId=" + functionId;
         String body = "body=" + URLEncoder.encode("{\"version\":\"2\",\"channel\":\"app\"", "UTF-8") + "&appid=wh5&loginWQBiz=pet-town&clientVersion=9.0.4";
         String s = HttpRequestUtils.doPost(url, body, header);
@@ -325,7 +326,7 @@ public class JdServiceImpl {
         header.put("Cookie", ck);
         header.put("Host", "api.m.jd.com");
         header.put("Content-Type", "application/x-www-form-urlencoded");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String url = "https://api.m.jd.com/client.action?functionId=getJingBeanBalanceDetail";
         String body = "body=" + URLEncoder.encode("{ \"pageSize\": \"20\", \"page\":\"" + page + "\" }", "UTF-8") + "&appid=ld";
         String s = HttpRequestUtils.doPost(url, body, header);
@@ -346,7 +347,7 @@ public class JdServiceImpl {
         header.put("Accept-Language", "zh-cn");
         header.put("Referer", "https://home.m.jd.com/myJd/newhome.action?sceneval=2&ufc=&");
         header.put("Accept-Encoding", "gzip, deflate, br");
-        header.put("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String s = HttpRequestUtils.doGet("https://me-api.jd.com/user_new/info/GetJDUserInfoUnion", header);
         return JSONObject.parseObject(s);
     }
@@ -364,8 +365,8 @@ public class JdServiceImpl {
         header.put("Connection", "keep-alive");
         header.put("Referer", "https://servicewechat.com/wxa5bf5ee667d91626/161/page-frame.html");
         header.put("Accept-Encoding", "gzip,compress,br,deflate");
-        header.put("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.10(0x18000a2a) NetType/WIFI Language/zh_CN");
-        String s = HttpRequestUtils.doGet("https://wxapp.m.jd.com/kwxhome/myJd/home.json?&useGuideModule=0&bizId=&brandId=&fromType=wxapp&timestamp=" + System.currentTimeMillis(), header);
+        header.put("User-Agent", this.getAgent());
+        String s = HttpRequestUtils.doPost("https://wxapp.m.jd.com/kwxhome/myJd/home.json?&useGuideModule=0&bizId=&brandId=&fromType=wxapp&timestamp=" + System.currentTimeMillis(),  header);
         return JSONObject.parseObject(s);
     }
 
@@ -379,7 +380,8 @@ public class JdServiceImpl {
     public String loadCk(String ck, String qq) {
         String msg = "";
         String pin = CookieUtils.getPin(ck);
-        pin = pin.substring(0, 7) + URLEncoder.encode(pin.substring(7, pin.length() - 1), "UTF-8") + ";";
+        //对pin转码
+        pin = CommonUtils.encodeChineseStr(pin);
         String key = CookieUtils.getKey(ck);
         ck = pin + key;
         JSONObject o = this.checkLogin(ck);
@@ -450,7 +452,7 @@ public class JdServiceImpl {
         Map<String, String> header = new HashMap<>(3);
         header.put("Cookie", ck);
         header.put("referer", "https://h5.m.jd.com/");
-        header.put("User-Agent", "jdapp;iPhone;10.1.2;15.0;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1");
+        header.put("User-Agent", this.getAgent());
         String s = HttpRequestUtils.doGet("https://plogin.m.jd.com/cgi-bin/ml/islogin", header);
         JSONObject o = JSONObject.parseObject(s);
         return o;
@@ -568,4 +570,51 @@ public class JdServiceImpl {
             MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮服务有效性检测共有" + count + "个账号失效！分别为：\r\n" + String.join("，", qqs));
         }
     }
+
+    /**
+     * 取得随机Agent
+     * @return agent
+     */
+    private String getAgent(){
+        return USER_AGENTS[CommonUtils.generateRangeRandomNumber(0, USER_AGENTS.length)];
+    }
+
+    private static final String[] USER_AGENTS = new String[]{
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; ONEPLUS A5010 Build/QKQ1.191014.012; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045230 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;android;10.1.6;9;network/4g;Mozilla/5.0 (Linux; Android 9; Mi Note 3 Build/PKQ1.181007.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/045131 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; GM1910 Build/QKQ1.190716.003; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045230 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;9;network/wifi;Mozilla/5.0 (Linux; Android 9; 16T Build/PKQ1.190616.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/044942 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;13.6;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;13.6;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;13.5;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;14.1;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;13.3;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;13.7;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;14.1;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;13.3;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;13.4;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 13_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;14.3;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;android;10.1.6;9;network/wifi;Mozilla/5.0 (Linux; Android 9; MI 6 Build/PKQ1.190118.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/044942 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;11;network/wifi;Mozilla/5.0 (Linux; Android 11; Redmi K30 5G Build/RKQ1.200826.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045511 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;11.4;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 11_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15F79",
+        "jdapp;android;10.1.6;10;;network/wifi;Mozilla/5.0 (Linux; Android 10; M2006J10C Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045230 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; M2006J10C Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045230 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; ONEPLUS A6000 Build/QKQ1.190716.003; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045224 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;9;network/wifi;Mozilla/5.0 (Linux; Android 9; MHA-AL00 Build/HUAWEIMHA-AL00; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/044942 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;8.1.0;network/wifi;Mozilla/5.0 (Linux; Android 8.1.0; 16 X Build/OPM1.171019.026; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/044942 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;8.0.0;network/wifi;Mozilla/5.0 (Linux; Android 8.0.0; HTC U-3w Build/OPR6.170623.013; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/044942 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;14.0.1;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; LYA-AL00 Build/HUAWEILYA-AL00L; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045230 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;14.2;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;14.3;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;14.2;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;android;10.1.6;8.1.0;network/wifi;Mozilla/5.0 (Linux; Android 8.1.0; MI 8 Build/OPM1.171019.026; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/045131 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; Redmi K20 Pro Premium Edition Build/QKQ1.190825.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045227 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;14.3;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;iPhone;10.1.6;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "jdapp;android;10.1.6;11;network/wifi;Mozilla/5.0 (Linux; Android 11; Redmi K20 Pro Premium Edition Build/RKQ1.200826.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045513 Mobile Safari/537.36",
+        "jdapp;android;10.1.6;10;network/wifi;Mozilla/5.0 (Linux; Android 10; MI 8 Build/QKQ1.190828.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045227 Mobile Safari/537.36",
+        "jdapp;iPhone;10.1.6;14.1;network/wifi;Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+    };
 }
