@@ -57,16 +57,21 @@
             <artifactId>jasypt-spring-boot-starter</artifactId>
             <version>3.0.4</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-mp</artifactId>
+            <version>4.4.0</version>
+        </dependency>
     </dependencies>
 
     <build>
+        <finalName>qqbot</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.gaofeicm.qqbot.QqbotApplication</mainClass>
+                    <mainClass>com.gaofeicm.QqbotApplication</mainClass>
                     <layout>ZIP</layout>
                     <includes>
                         <include>

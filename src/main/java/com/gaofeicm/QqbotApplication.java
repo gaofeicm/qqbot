@@ -1,4 +1,4 @@
-package com.gaofeicm.qqbot;
+package com.gaofeicm;
 
 import com.ulisesbocchio.jasyptspringboot.annotation.EnableEncryptableProperties;
 import org.mybatis.spring.annotation.MapperScan;
