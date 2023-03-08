@@ -27,6 +27,10 @@ public class Cookie implements Serializable {
     @TableField("oid")
     private String oid;
 
+
+    @TableField("wxid")
+    private String wxid;
+
     @TableField("priority")
     private Integer priority;
         

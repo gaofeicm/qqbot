@@ -178,7 +178,7 @@ public class HttpRequestUtils {
         return resultStr;
     }
 
-    public class HttpClientFactory {
+    public static class HttpClientFactory {
         private static CloseableHttpClient client;
         public static HttpClient getHttpsClient() throws Exception {
             if (client != null) {

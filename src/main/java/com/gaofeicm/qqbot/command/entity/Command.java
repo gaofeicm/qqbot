@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -27,11 +28,11 @@ public class Command {
     private JSONObject param;
 
     public void setOption(Object... option) {
-        this.option = List.of(option);
+        this.option = Arrays.asList(option);
     }
 
     public void setAction(Object... action) {
-        this.action = List.of(action);
+        this.action = Arrays.asList(action);
     }
 
     public Command addAction(Object value) {

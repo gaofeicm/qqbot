@@ -6,10 +6,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.gaofeicm.qqbot.entity.Ql;
 import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.service.QlService;
-import com.gaofeicm.qqbot.utils.CommandUtils;
-import com.gaofeicm.qqbot.utils.CommonUtils;
-import com.gaofeicm.qqbot.utils.HttpRequestUtils;
-import com.gaofeicm.qqbot.utils.MessageUtils;
+import com.gaofeicm.qqbot.utils.*;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -29,7 +26,12 @@ public class RemoteQlServiceImpl {
     @Resource
     private QlService qlService;
 
-    public void syncQlCookie(String qq, String mag) {
+    /**
+     * 同步cookie到面板
+     * @param qq qq
+     * @param msg 命令
+     */
+    public void syncQlCookie(String qq, String msg) {
         if (!qq.equals(CommonUtils.getAdminQq())) {
             return;
         }
@@ -42,26 +44,39 @@ public class RemoteQlServiceImpl {
                 tck.put(name, new JSONArray());
             }
             if (qls.get(name) == null) {
-                qls.put(name, new HashMap<>() {{
+                qls.put(name, new HashMap<String, Object>() {{
                     put("name", ck.get("name"));
                     put("address", ck.get("address"));
                     put("token", ck.get("token"));
                     put("tokenType", ck.get("tokenType"));
                 }});
             }
-            tck.get(name).add(new HashMap<>(3) {{
+            tck.get(name).add(new HashMap<String, Object>(3) {{
                 put("value", ck.get("cookie"));
                 put("name", "JD_COOKIE");
                 put("remarks", ck.get("qq") + "-" + ck.get("id"));
             }});
         }
         StringBuilder sb = new StringBuilder();
-        tck.forEach((s, list) -> {
-            this.deleteQlOriginalData(qls.get(s));
-            this.addQlOriginalData(qls.get(s), list);
-            sb.append("面板名称：").append(qls.get(s).get("name")).append("，拥有").append(list.size()).append("条ck\r\n");
-        });
-        MessageUtils.sendPrivateMsg(qq, "同步完成\r\n" + sb.toString());
+        if(msg.length() > 2){
+            String n = msg.substring(2);
+            if(tck.containsKey(n)){
+                JSONArray array = tck.get(n);
+                this.deleteQlOriginalData(qls.get(n));
+                this.addQlOriginalData(qls.get(n), array);
+                sb.append("面板名称：").append(qls.get(n).get("name")).append("，拥有").append(array.size()).append("条ck\r\n");
+                MessageUtils.sendPrivateMsg(qq, "同步完成\r\n" + sb.toString());
+            }else{
+                MessageUtils.sendPrivateMsg(qq, "无法找到名称为：" + n + "的面板面板");
+            }
+        }else{
+            tck.forEach((s, list) -> {
+                this.deleteQlOriginalData(qls.get(s));
+                this.addQlOriginalData(qls.get(s), list);
+                sb.append("面板名称：").append(qls.get(s).get("name")).append("，拥有").append(list.size()).append("条ck\r\n");
+            });
+            MessageUtils.sendPrivateMsg(qq, "同步完成\r\n" + sb.toString());
+        }
     }
 
     /**
@@ -75,12 +90,35 @@ public class RemoteQlServiceImpl {
             return;
         }
         Map<String, String> header = this.getQlHeader(map);
-        JSONObject value = new JSONObject(3) {{
+        JSONObject value = new JSONObject(4) {{
             put("id", map.get("oid"));
             put("value", map.get("cookie"));
             put("name", "JD_COOKIE");
             put("remarks", map.get("qq") + "-" + map.get("cid"));
         }};
+        String t = HttpRequestUtils.doGet(map.get("address") + "/open/envs??searchValue=" + CookieUtils.getPin(map.get("cookie").toString()) + "&t=" + System.currentTimeMillis(), header);
+        if (t != null) {
+            JSONObject jsonObject = JSONObject.parseObject(t);
+            if ("200".equals(jsonObject.getString("code"))) {
+                if(jsonObject.get("data") != null) {
+                    JSONArray data = jsonObject.getJSONArray("data");
+                    if(data != null && data.size() == 1){
+                        JSONObject o = (JSONObject)data.get(0);
+                        if(!map.get("oid").equals(o.get("id"))){
+                            value.remove("id");
+                            addQlOriginalData(map, new com.alibaba.fastjson2.JSONArray(){{add(value);}});
+                            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie成功，面板" + map.get("name") + "cookie与当前账号不匹配，已转为添加ck方法！");
+                            return;
+                        }
+                    }
+                }else{
+                    value.remove("id");
+                    addQlOriginalData(map, new com.alibaba.fastjson2.JSONArray(){{add(value);}});
+                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie成功，原面板" + map.get("name") + "无法找到当前ck，已转为添加ck方法！");
+                    return;
+                }
+            }
+        }
         String s = HttpRequestUtils.doPut(map.get("address") + "/open/envs?t=" + System.currentTimeMillis(), value.toJSONString(), header);
         if (s != null) {
             JSONObject jsonObject = JSONObject.parseObject(s);
@@ -90,13 +128,15 @@ public class RemoteQlServiceImpl {
                     //启用cookie
                     this.enableQlOriginalData(map);
                 }else {
-                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie失败，可能是面板里面已不存在此记录，请手动操作！");
+                    value.remove("id");
+                    addQlOriginalData(map, new com.alibaba.fastjson2.JSONArray(){{add(value);}});
+                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie成功，原面板" + map.get("name") + "更新方法无返回记录，已转为添加ck方法！");
                 }
             }else if("401".equals(jsonObject.getString("code"))){
                 MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "token错误，开始重试获取新的token！" + map.toString());
                 JSONObject qlToken = CommandUtils.getQlToken(map.get("address") + "/open/auth/token?client_id=" + map.get("clientId") + "&client_secret=" + map.get("clientSecret"));
                 if(qlToken == null){
-                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "无法获取token！请检查配置及服务状态！");
+                    MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "无法获取token！请检查配置及服务状态！面板：" + map.get("name"));
                 }else{
                     Ql ql = new Ql();
                     ql.setId(map.get("qid").toString());
@@ -116,10 +156,10 @@ public class RemoteQlServiceImpl {
                                 //启用cookie
                                 this.enableQlOriginalData(map);
                             }else {
-                                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie失败，可能是面板里面已不存在此记录，请手动操作！");
+                                MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie失败，可能是面板" + map.get("name") + "里面已不存在此记录，请手动操作！");
                             }
                         }else{
-                            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "使用新的token更新ck依旧错误，请检查后台日志！");
+                            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "使用新的token更新ck依旧错误，请检查后台日志！面板：" + map.get("name"));
                         }
                     }else{
                         MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "面板：" + map.get("name") + "保存新的token失败！");
@@ -127,7 +167,9 @@ public class RemoteQlServiceImpl {
                 }
             }
         } else {
-            throw new RuntimeException("添加面板原始数据返回值为null");
+            value.remove("id");
+            addQlOriginalData(map, new com.alibaba.fastjson2.JSONArray(){{add(value);}});
+            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "更新cookie成功，原面板" + map.get("name") + "更新数据失败，已转为添加ck方法！");
         }
     }
 

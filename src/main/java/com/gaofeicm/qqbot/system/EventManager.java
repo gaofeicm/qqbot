@@ -15,7 +15,7 @@ public class EventManager {
 
     private final static Logger log = LoggerFactory.getLogger(EventManager.class);
 
-    private static final Map<String, BaseEventManager> EVENT_MANAGER_MAP = new HashMap<>(4){{
+    private static final Map<String, BaseEventManager> EVENT_MANAGER_MAP = new HashMap<String, BaseEventManager>(4){{
         put("message", new MessageEventManger());
         put("request", new RequestEventManger());
         put("notice", new NoticeEventManger());

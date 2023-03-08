@@ -1,6 +1,7 @@
 package com.gaofeicm.qqbot.utils;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.gaofeicm.common.CommonVariable;
 import com.gaofeicm.qqbot.controller.WebSocketController;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
@@ -23,9 +24,15 @@ public class MessageUtils {
      * @param userId 用户id
      * @param message 消息内容
      */
-    public static void sendPrivateMsg(String userId, String message){
+    public static String sendPrivateMsg(String userId, String message){
+        if(CommonVariable.DOING_LIST.contains(userId)){
+            return message;
+        }
+        /*if(!StringUtils.isNumeric(userId)){
+            return message;
+        }*/
         if(isLock){
-            return;
+            return null;
         }
         JSONObject msg = new JSONObject();
         msg.put("action", "send_private_msg");
@@ -39,6 +46,7 @@ public class MessageUtils {
             isLock = true;
             reConnection(msg.toString(), userId, message);
         }
+        return null;
     }
 
     private static void reConnection(String msg, String userId, String message){
@@ -46,7 +54,7 @@ public class MessageUtils {
             if(!MessageUtils.webSocketClient.isOpen()){
                 WebSocketController.webSocketClient();
             }
-            Thread.sleep(1 * 1000);
+            Thread.sleep(1000);
             send(msg, userId, message);
             isLock = false;
         }catch (Exception e){

@@ -64,6 +64,21 @@ public class CommonUtils {
     }
 
     /**
+     * 生成随机位数的数字
+     *
+     * @param random 位数
+     * @return 随机数字
+     */
+    public static String randomNumber(int random) {
+        StringBuffer sb = new StringBuffer();
+        String t = "0123456789";
+        for (int i = 0; i < random; i++) {
+            sb.append(t.charAt((int) Math.floor(Math.random() * t.length())));
+        }
+        return sb.toString();
+    }
+
+    /**
      * 获取字符串的Unicode编码
      *
      * @param str 字符串

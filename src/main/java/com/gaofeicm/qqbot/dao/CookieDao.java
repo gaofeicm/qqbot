@@ -42,4 +42,12 @@ public interface CookieDao extends BaseMapper<Cookie> {
             " join ql_cookie qc on (c.id = qc.cookie_id)" +
             " join ql q on (q.id = qc.ql_id)")
     Map<String, Object> getCookieById(@Param("id") String id);
+
+    /**
+     * 按wxid获取qq
+     * @param wxid wxid
+     * @return
+     */
+    @Select("SELECT DISTINCT c.qq FROM COOKIE c WHERE c.wxid = #{wxid}")
+    List<String> getQqByWxid(@Param("wxid") String wxid);
 }

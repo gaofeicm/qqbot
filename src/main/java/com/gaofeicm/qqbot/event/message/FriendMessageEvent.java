@@ -1,16 +1,17 @@
 package com.gaofeicm.qqbot.event.message;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.gaofeicm.qqbot.biz.JpkServiceImpl;
+import com.gaofeicm.common.utils.RedisUtil;
+import com.gaofeicm.qqbot.biz.*;
 import com.gaofeicm.qqbot.command.CommandService;
 import com.gaofeicm.qqbot.command.entity.Command;
 import com.gaofeicm.qqbot.entity.Cookie;
 import com.gaofeicm.qqbot.service.CookieService;
-import com.gaofeicm.qqbot.biz.JdServiceImpl;
-import com.gaofeicm.qqbot.biz.RemoteQlServiceImpl;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,15 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
     @Resource
     private JdServiceImpl jdService;
 
+    @Resource
+    private CronServiceImpl cronService;
+
+    @Resource
+    private VpsServerImpl vpsServer;
+
+    @Resource
+    private RedisUtil redisUtil;
+
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     @Override
@@ -55,9 +66,14 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         return "friend";
     }
 
-    @SneakyThrows
     @Override
     public void handle(JSONObject message) {
+        this.handleStr(message);
+    }
+
+    @SneakyThrows
+    public String handleStr(JSONObject message) {
+        String rStr = "";
         String msg = message.getString("message").trim();
         String qq = message.getString("user_id");
         log.info("收到QQ：" + qq + "的消息，内容为:" + msg);
@@ -81,19 +97,17 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                     if(beforeMsg != null){
                         this.handle(beforeMsg);
                     }
-                    return;
+                    return "";
                 }
             }else{
                 if("取消".equals(msg)){
                     cmds.remove(cmd);
-                    MessageUtils.sendPrivateMsg(qq, "任务已取消！");
-                    return;
+                    return MessageUtils.sendPrivateMsg(qq, "任务已取消！");
                 }
                 StringBuilder sb = new StringBuilder();
                 sb.append("指令回复出错!您当前的待办任务如下：\r\n");
                 sb.append(cmd.getMessage());
-                MessageUtils.sendPrivateMsg(qq, sb.toString());
-                return;
+                return MessageUtils.sendPrivateMsg(qq, sb.toString());
             }
         }
         //ck检查
@@ -101,13 +115,12 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         if(ck != null){
             MessageUtils.sendPrivateMsg(qq, "正在检查账号状态，请稍候。。。");
             String loadMsg = jdService.loadCk(ck, qq);
-            MessageUtils.sendPrivateMsg(qq, loadMsg);
-            return;
+            return MessageUtils.sendPrivateMsg(qq, loadMsg);
         }
         //按QQ查询信息
         if(msg.startsWith("查询QQ：")){
             if(!qq.equals(CommonUtils.getAdminQq())){
-                return;
+                return MessageUtils.sendPrivateMsg(qq, "无操作权限");
             }
             String tq = msg.substring(5);
             List<Cookie> cookies = cookieService.getCookieByQq(tq);
@@ -119,22 +132,47 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                     m.append(cookie.getId()).append("      ").append(cookie.getQq()).append("    ").append(cookie.getPtPin(), 7, cookie.getPtPin().length() - 1).append("       ").append(cookie.getAvailable() == 1 ? "是" : "否").append("  ").append(SDF.format(cookie.getExpirationTime())).append("\r\n");
                 }
             }
-            MessageUtils.sendPrivateMsg(qq, m.toString());
-            return;
+            return MessageUtils.sendPrivateMsg(qq, m.toString());
+        }
+        //查询
+        if(msg.startsWith("查询")){
+            if("查询".equals(msg)){
+                rStr = this.findCkAccount(qq, "-1");
+            }else{
+                if(msg.length() > 2){
+                    String num = msg.substring(2);
+                    if(StringUtils.isNumeric(num)){
+                        rStr = this.findCkAccount(qq, num);
+                    }
+                }
+            }
+            return MessageUtils.sendPrivateMsg(qq, rStr);
+        }
+        //按QQ查询信息
+        if(msg.startsWith("同步")){
+            remoteQlService.syncQlCookie(qq, msg);
         }
         switch (msg){
-            case "查询":
-                this.findCkAccount(qq);
+            /*case "查询":
+                rStr = this.findCkAccount(qq);
+                break;*/
+            case "重启":
+                if(qq.equals(CommonUtils.getAdminQq())){
+                    Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "sh /root/qqbot/restart.sh"});
+                }
+                break;
+            case "全部重启":
+                if(qq.equals(CommonUtils.getAdminQq())){
+                    Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "sh /root/start.sh"});
+                }
                 break;
             case "菜单":
-                MessageUtils.sendPrivateMsg(qq, this.getMenuStr());
-                break;
-            case "同步":
-                remoteQlService.syncQlCookie(qq, msg);
-                break;
+                return MessageUtils.sendPrivateMsg(qq, this.getMenuStr());
+            //break;
             case "登陆":
             case "登录":
-                this.loginStr(qq);
+                rStr = "京东已经限制了异地登录，请按照群文件操作视频或软件获取ck！";
+                //this.loginStr(qq);
                 break;
             case "更新面板":
                 this.executeReturnMessage(commandService.updateQlCookieStr(new JSONObject(){{put("to", qq);}}));
@@ -146,22 +184,22 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 this.executeReturnMessage(commandService.addQlCookieStr(new JSONObject(){{put("to", qq);}}));
                 break;
             case "检查":
-                jdService.cronCheckCkLogin();
+                cronService.cronCheckCkLogin();
                 break;
             case "余量":
-                this.checkVps(qq);
+                rStr = this.checkVps(qq);
                 break;
             case "启动检查":
-                JdServiceImpl.checkCkSwitch = true;
-                break;
+                CronServiceImpl.checkServerSwitch = true;
+                return MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "已启用自动检查！");
             case "关闭检查":
-                JdServiceImpl.checkCkSwitch = false;
-                break;
+                CronServiceImpl.checkServerSwitch = false;
+                return MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "已关闭自动检查！");
             case "原理":
-                MessageUtils.sendPrivateMsg(qq, "1、自动帮忙做一些需要手动点的任务\r\n 2、一些活动需要邀请好友帮忙做任务，大家挂一起都是互相互助\r\n");
+                rStr = MessageUtils.sendPrivateMsg(qq, "1、自动帮忙做一些需要手动点的任务\r\n 2、一些活动需要邀请好友帮忙做任务，大家挂一起都是互相互助\r\n");
                 break;
             case "教程":
-                MessageUtils.sendPrivateMsg(qq, this.getJcStr());
+                rStr = MessageUtils.sendPrivateMsg(qq, this.getJcStr());
                 break;
             case "账号管理":
                 this.manageAccount(qq, msg);
@@ -170,11 +208,11 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 this.manageQl(qq, msg);
                 break;
             case "小姐姐":
-                MessageUtils.sendPrivateMsg(qq, "[CQ:image,file=http://api.btstu.cn/sjbz/zsy.php,cache=0]");
+                MessageUtils.sendPrivateMsg(qq, "[CQ:image,file=https://api.tjit.net/api/img/rand,cache=0]");
                 break;
             case "舔狗":
             case "舔狗日记":
-                MessageUtils.sendPrivateMsg(qq, HttpRequestUtils.doGet("https://api.oick.cn/dog/api.php"));
+                rStr = MessageUtils.sendPrivateMsg(qq, HttpRequestUtils.doGet("https://api.oick.cn/dog/api.php"));
                 break;
             case "二次元":
                 MessageUtils.sendPrivateMsg(qq, "[CQ:image,file=http://www.dmoe.cc/random.php,cache=0]");
@@ -183,60 +221,34 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 MessageUtils.sendPrivateMsg(qq, "[CQ:image,file=https://raw.githubusercontent.com/gaofeicm/gaofeicm.github.io/master/assets/images/donate.png,cache=1]");
                 break;
             case "新闻":
-                MessageUtils.sendPrivateMsg(qq, "今日新闻：\r\n" + JSONObject.parseObject(HttpRequestUtils.doGet("http://bjb.yunwj.top/php/qq.php")).getString("wb").replaceFirst("【换行】", "").replaceAll("【换行】", "\r\n"));
+                rStr = MessageUtils.sendPrivateMsg(qq, "今日新闻：\r\n" + JSONObject.parseObject(HttpRequestUtils.doGet("http://bjb.yunwj.top/php/qq.php")).getString("wb").replaceFirst("【换行】", "").replaceAll("【换行】", "\r\n"));
                 break;
             default:
-                MessageUtils.sendPrivateMsg(qq, "我只是个笨蛋机器人，你说的话我还不会接。不要连续发我听不懂的话，发多了我不理你了！");
+                rStr = MessageUtils.sendPrivateMsg(qq, "我只是个笨蛋机器人，你说的话我还不会接。不要连续发我听不懂的话，发多了我不理你了！");
         }
+        return rStr;
     }
 
     /**
      * 增加余量查询
      * @param qq qq
      */
-    private void checkVps(String qq){
+    private String checkVps(String qq){
         try {
             StringBuilder vps = new StringBuilder("--------------------woiden--------------------\r\n");
-            StringBuilder vps1 = this.getVps("https://woiden.id/create-vps/");
-            vps.append(vps1.isEmpty() ? "无可用的服务器！\r\n\r\n" : vps1 + "\r\n\r\n");
+            StringBuilder vps1 = vpsServer.getVps("https://woiden.id/create-vps/");
+            vps.append(vps1.length() == 0 ? "无可用的服务器！\r\n\r\n" : vps1 + "\r\n\r\n");
             vps.append("----------------------hax----------------------\r\n");
-            StringBuilder vps2 = this.getVps("https://hax.co.id/create-vps/");
-            vps.append(vps2.isEmpty() ? "无可用的服务器！" : vps2);
-            MessageUtils.sendPrivateMsg(qq, vps.toString());
+            StringBuilder vps2 = vpsServer.getVps("https://hax.co.id/create-vps/");
+            vps.append(vps2.length() == 0 ? "无可用的服务器！" : vps2);
+            return MessageUtils.sendPrivateMsg(qq, vps.toString());
         }catch (Exception e){
             e.printStackTrace();
         }
+        return null;
     }
 
-    /**
-     * 增加余量查询
-     * @param url url
-     * @return vps
-     */
-    private StringBuilder getVps(String url){
-        String s = HttpRequestUtils.post(url);
-        StringBuilder stringBuilder = new StringBuilder("");
-        if(s == null || "".equals(s)){
-            return stringBuilder.append("未获取到源数据！");
-        }
-        int datacenter = s.indexOf("datacenter");
-        if (datacenter < 0) {
-            return stringBuilder.append("未获取到源数据！");
-        }
-        s = s.substring(datacenter);
-        int i1 = s.indexOf("-select-</option>");
-        int i2 = s.indexOf("</select>");
-        s = s.substring(i1 + 17, i2).trim();
-        while(s.contains("<option value=")){
-            int a = s.indexOf("\">");
-            int b = s.indexOf("</option>");
-            stringBuilder.append(s.substring(a + 2, b) + "\r\n");
-            s = s.substring(b + 9);
-        }
-        return stringBuilder;
-    }
-
-    private void loginStr(String qq){
+    /*private void loginStr(String qq){
         StringBuilder message = new StringBuilder("傻妞为您服务，请在120秒内输入11位手机号码（输入“取消”随时退出会话）：");
         Command command = CommandUtils.getDefaultCommand(message.toString());
         command.setOption("1");
@@ -244,7 +256,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         command.putParam("from", qq).putParam("to", qq).putParam("createTime", System.currentTimeMillis());
         CommandUtils.addCommand(qq, command);
         MessageUtils.sendPrivateMsg(qq, message.toString());
-    }
+    }*/
 
     /**
      * ck管理
@@ -291,33 +303,52 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
     /**
      * 获取用户信息
      * @param qq qq
+     * @param num num
      */
-    private void findCkAccount(String qq){
-        List<Cookie> cookies = cookieService.getCookieByQq(qq);
+    private String findCkAccount(String qq, String num){
+        String rStr = "";
+        List<Cookie> cookies = new ArrayList<>();
+        JSONArray array = JSONArray.parseArray(redisUtil.get(qq));
+        array.forEach(v -> cookies.add(JSONObject.parseObject(JSON.toJSONString(v), Cookie.class)));
+        //List<Cookie> cookies = cookieService.getCookieByQq(qq);
         int count = cookies.size();
         if(count == 0){
-            MessageUtils.sendPrivateMsg(qq, "您还没有添加账号，请根据群公告获取ck后发给我");
-            return;
+            return MessageUtils.sendPrivateMsg(qq, "您还没有添加账号，请根据群公告获取ck后发给我");
         }
         long t = System.currentTimeMillis();
         List<Cookie> availableCookies = cookies.stream().filter(cookie -> cookie.getAvailable() == 1 && cookie.getExpirationTime().getTime() > t).collect(Collectors.toList());
         long count1 = availableCookies.size();
         long count2 = cookies.stream().filter(cookie -> cookie.getAvailable() != 1 || cookie.getExpirationTime().getTime() <= t).count();
-        StringBuilder m = new StringBuilder("执行查询命令，您总共有").append(cookies.size()).append("个账号");
+        StringBuilder m = new StringBuilder("执行查询命令，您总共有").append(cookies.size()).append("个账号\r\n\r\n");
         if(count1 > 0 && count2 > 0){
             m.append("，").append(count1).append("个有效账号，").append(count2).append("个失效账号！\r\n");
-            m.append("可能存在的情况：\r\n1、代挂服务未过期，ck过期了，请重新提交，并联系管理员刷新ck\r\n2、代挂服务过期了，请续费后重新获取ck发送给我，并联系管理员审核\r\n\r\n");
+            m.append("可能存在的情况：\r\n1、代挂服务未过期，ck过期了，请重新提交，会自动更新\r\n2、代挂服务过期了，请续费后重新获取ck发送给我，并联系管理员审核\r\n\r\n");
         }
         if(count1 == 0){
-            m.append("，").append(count2).append("个失效账号！\r\n");
+            m.append("，").append(count2).append("个失效账号！\r\n\r\n");
         }
-        MessageUtils.sendPrivateMsg(qq, m.toString());
+        //MessageUtils.sendPrivateMsg(qq, m.toString());
         if(count1 > 0){
-            availableCookies.forEach(cookie -> {
-                String ckAccount = this.findCkAccountInfo(cookie.getCookie());
-                MessageUtils.sendPrivateMsg(qq, ckAccount);
-            });
+            int n = Integer.parseInt(num);
+            if(n < 0){
+                availableCookies.forEach(cookie -> {
+                    String ckAccount = this.findCkAccountInfo(cookie.getCookie());
+                    m.append(ckAccount).append("\r\n").append("-----------------------\r\n");
+                });
+            }else{
+                for(int i = 0; i < num.length(); i ++){
+                    String c = num.charAt(i) + "";
+                    int nc = Integer.parseInt(c);
+                    if(nc <= count && nc > 0){
+                        Cookie cookie = availableCookies.get((nc - 1));
+                        String ckAccount = this.findCkAccountInfo(cookie.getCookie());
+                        m.append(ckAccount).append("\r\n").append("-----------------------\r\n");
+                    }
+                }
+            }
         }
+        rStr = m.toString();
+        return rStr;
     }
 
     /**
@@ -332,14 +363,14 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
         }
         JSONObject userInfo2 = jdService.getUserInfo2(ck);
         Map<String, Object> bean = jdService.getBean(ck);
-        JSONObject jxmc = jdService.getJxmc(ck);
+        //JSONObject jxmc = jdService.getJxmc(ck);
         JSONObject jdjs = jdService.getJdjs(ck);
         JSONObject jdzz = jdService.getJdzz(ck);
         JSONObject jdms = jdService.getJdms(ck);
         //JSONObject jdww = jdService.getJdww(ck);
         JSONObject jdnc = jdService.getJdnc(ck);
         JSONObject jdmc1 = jdService.getJdmc(ck, "energyCollect");
-        JSONObject jdmc2 = jdService.getJdmc(ck, "initPetTown");
+        //JSONObject jdmc2 = jdService.getJdmc(ck, "initPetTown");
         StringBuffer msg = new StringBuffer("【账号\uD83C\uDD94】");
         String nickName = "";
         String levelName = "";
@@ -385,7 +416,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             int v = jdms.getJSONObject("result").getJSONObject("assignment").getIntValue("assignmentPoints ");
             msg.append("【京东秒杀】").append(v).append("币(≈").append(new DecimalFormat("0.00").format((float)v / 1000)).append("元)\r\n");
         }
-        if(jxmc != null && "0".equals(jxmc.getString("ret"))){
+        /*if(jxmc != null && "0".equals(jxmc.getString("ret"))){
             int v = jxmc.getJSONObject("data").getIntValue("eggcnt");
             if(v == 0){
                 msg.append("【京喜牧场】未开通或提示火爆\n");
@@ -393,7 +424,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
 
                 msg.append("【京喜牧场】").append(v).append("枚鸡蛋\r\n");
             }
-        }
+        }*/
         /*if(jdww != null && jdww.getBooleanValue("success")){
             int v = jdww.getIntValue("level");
             msg.append("【汪汪乐园】汪汪等级:").append(v).append("级\r\n");
@@ -424,7 +455,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
                 }
             }
         }
-        if(jdmc2 != null && jdmc2.getIntValue("code") == 0 && jdmc2.getIntValue("resultCode") == 0 && "success".equals(jdmc2.getString("message"))){
+        /*if(jdmc2 != null && jdmc2.getIntValue("code") == 0 && jdmc2.getIntValue("resultCode") == 0 && "success".equals(jdmc2.getString("message"))){
             JSONObject result = jdmc2.getJSONObject("result");
             int status = result.getIntValue("petStatus");
             JSONObject goodsInfo = result.getJSONObject("goodsInfo");
@@ -441,7 +472,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
             } else{
                 msg.append("【东东萌宠】暂未选购新的商品!\r\n");
             }
-        }
+        }*/
         //msg.append("【京喜工厂】").append(2399).append("枚鸡蛋\r\n");
         msg.append(this.getRed(ck));
         return msg.toString();
@@ -535,18 +566,19 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
     private String getJcStr(){
         StringBuilder sb = new StringBuilder();
         sb.append("发送 查询，查看个人账户全部信息，3次/天\r\n");
-        sb.append("发送 月度查询，查询个人账户本月全部收益，1次/天\r\n");
+        //sb.append("发送 月度查询，查询个人账户本月全部收益，1次/天\r\n");
         sb.append("发送 原理，了解是如何领京豆和红包的\r\n");
         sb.append("\r\n");
         sb.append("活动攻略:\r\n");
+        sb.append("主要做以下任务，得红包:\r\n");
         sb.append("【东东农场】京东->我的->东东农场,完成是京东红包,可以用于京东app的任意商品\r\n");
         sb.append("【极速金币】京东极速版->我的->金币(极速版使用)\r\n");
         sb.append("【京东赚赚】微信->京东赚赚小程序->底部赚好礼->提现无门槛红包(京东使用)\r\n");
-        sb.append("【京东秒杀】京东->中间频道往右划找到京东秒杀->中间点立即签到->兑换无门槛红包(京东使用)\r\n");
-        sb.append("【东东萌宠】京东->我的->东东萌宠,完成是京东红包,可以用于京东app的任意商品\r\n");
+        //sb.append("【京东秒杀】京东->中间频道往右划找到京东秒杀->中间点立即签到->兑换无门槛红包(京东使用)\r\n");
+        //sb.append("【东东萌宠】京东->我的->东东萌宠,完成是京东红包,可以用于京东app的任意商品\r\n");
         sb.append("【领现金】京东->我的->东东萌宠->领现金(微信提现 京东红包)\r\n");
-        sb.append("【京喜工厂】京喜->我的->京喜工厂,完成是商品红包,用于购买指定商品(不兑换会过期)\r\n");
-        sb.append("【京东金融】京东金融app->我的->养猪猪,完成是白条支付券,支付方式选白条支付时立减.\r\n");
+        //sb.append("【京喜工厂】京喜->我的->京喜工厂,完成是商品红包,用于购买指定商品(不兑换会过期)\r\n");
+        //sb.append("【京东金融】京东金融app->我的->养猪猪,完成是白条支付券,支付方式选白条支付时立减.\r\n");
         sb.append("【其他】京喜红包只能在京喜使用,其他同理\r\n");
         sb.append("\r\n");
         sb.append("新号最好别挂，会影响到别人的号的，挂多个号的请重新下单，未重新拍的提交了也不会生效，过期了请及时续费，未续费重新提交的会被系统随机检测到封账号，请及时续费。\r\n");
@@ -560,7 +592,7 @@ public class FriendMessageEvent extends MessageEvent implements ApplicationRunne
     private String getMenuStr(){
         StringBuilder sb = new StringBuilder();
         sb.append("------------京 东 区------------\r\n");
-        sb.append("查询   原理    教程    签到（未上线）\r\n");
+        sb.append("查询   原理    教程  \r\n");
         sb.append("------------娱 乐 区------------\r\n");
         sb.append("打赏 | 你的鼓励是我最大的动力\r\n");
         sb.append("小姐姐 | 看小姐姐\r\n");

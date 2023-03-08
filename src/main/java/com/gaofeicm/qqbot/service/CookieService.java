@@ -75,4 +75,26 @@ public interface CookieService {
      * @return cks cks
      */
     Map<String, Object> getCookieById(String id);
+
+    /**
+     * 按qq更新wxid
+     * @param qq qq
+     * @param wxid wxid
+     * @return 操作结果
+     */
+    int updateCookieWxidByQq(String qq, String wxid);
+
+    /**
+     * 按wxid获取qq
+     * @param wxid wxid
+     * @return
+     */
+    String getQqByWxid(String wxid);
+
+    /**
+     * 获取所有ck按qq排序
+     * param 参数集合
+     * @return ck集合
+     */
+    public List<Cookie> getCookieOrderByQq(Map<String, Object> param);
 }

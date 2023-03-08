@@ -62,6 +62,22 @@ public class CommandService {
     }
 
     /**
+     * 设置ck一个季度有效
+     * @param param 参数
+     */
+    public JSONObject setCookieExpForQuarter(JSONObject param){
+        return this.setCookieExp(param, 3);
+    }
+
+    /**
+     * 设置ck半年有效
+     * @param param 参数
+     */
+    public JSONObject setCookieExpForHalfYear(JSONObject param){
+        return this.setCookieExp(param, 6);
+    }
+
+    /**
      * 拒绝账号通过
      * @param param 参数
      * @return json
@@ -290,7 +306,7 @@ public class CommandService {
         JSONArray message = new JSONArray();
         StringBuilder msg = new StringBuilder();
         String m = param.getString("msg").substring(15);
-        List<Ql> qls = qlService.getQl(new HashMap<>(1){{put("id", m);}});
+        List<Ql> qls = qlService.getQl(new HashMap<String, Object>(1){{put("id", m);}});
         if(qls != null){
             for (Ql ql : qls) {
                 JSONObject qlToken = CommandUtils.getQlToken(ql.getAddress() + "/open/auth/token?client_id=" + ql.getClientId() + "&client_secret=" + ql.getClientSecret());

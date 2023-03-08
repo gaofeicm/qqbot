@@ -9,14 +9,12 @@ import com.gaofeicm.qqbot.service.CookieService;
 import com.gaofeicm.qqbot.utils.*;
 import lombok.SneakyThrows;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,7 +30,6 @@ public class JdServiceImpl {
 
     @Resource
     private RemoteQlServiceImpl remoteQlService;
-    public static boolean checkCkSwitch = true;
 
     private final static SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -46,6 +43,9 @@ public class JdServiceImpl {
         JSONObject map = new JSONObject();
         JSONObject jdncData1 = this.getJdncData1(ck);
         JSONObject jdncData2 = this.getJdncData2(ck);
+        if(jdncData1 == null || jdncData2 == null){
+            return null;
+        }
         JSONObject farmUserPro = jdncData2.getJSONObject("farmUserPro");
         if(farmUserPro != null){
             double waterEveryDayT = jdncData1.getJSONObject("totalWaterTaskInit").getDoubleValue("totalWaterTaskTimes");
@@ -417,10 +417,10 @@ public class JdServiceImpl {
             cookie.setPtKey(CookieUtils.getKey(ck));
             cookieService.saveCookie(cookie);
             msg += "您是首次添加此账号，提交请求已发送给管理员，等待审核！";
-            String message = "QQ:" + qq + ",pin:" + pin + "，id:" + cookie.getId() + "，正在请求添加账号，是否同意？\r\n1.同意(一个月)\r\n2.同意(一年)\r\n3.拒绝";
+            String message = "QQ:" + qq + ",pin:" + pin + "，id:" + cookie.getId() + "，正在请求添加账号，是否同意？\r\n1.同意(一个月)\r\n2.同意(一年)r\n3.同意(3个月)r\n4.同意(半年)\r\n5.拒绝";
             Command command = CommandUtils.getDefaultCommand(message);
             command.setOption("1", "2", "3");
-            command.setAction("setCookieExpForMonth", "setCookieExpForYear", "refuseCookie");
+            command.setAction("setCookieExpForMonth", "setCookieExpForYear", "setCookieExpForQuarter", "setCookieExpForHalfYear", "refuseCookie");
             command.putParam("from", qq).putParam("to", CommonUtils.getAdminQq()).putParam("id", cookie.getId()).putParam("ck", ck);
             CommandUtils.addCommand(CommonUtils.getAdminQq(), command);
             MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), message);
@@ -476,6 +476,21 @@ public class JdServiceImpl {
         if(keyMatcher.find()){
             return keyMatcher.group();
         }
+        int i1 = msg.indexOf("pt_key=");
+        int i2 = msg.indexOf("pt_pin=");
+        if(i1 > -1 && i2 > -1){
+            if(i2 > i1){
+                msg.substring(i1);
+                String a = msg.substring(i1);
+                int i = a.indexOf(";", a.indexOf("pt_pin=")) + 1;
+                return a.substring(0, i).replaceAll("&amp;#160;", "");
+            }else{
+                msg.substring(i2);
+                String a = msg.substring(i2) + 1;
+                int i = a.indexOf(";", a.indexOf("pt_key=")) + 1;
+                return a.substring(0, i).replaceAll("&amp;#160;", "");
+            }
+        }
         return null;
     }
 
@@ -513,61 +528,6 @@ public class JdServiceImpl {
             return levelName + "Plus, 等级:" + userLevel + ", " + jingXiang;
         } else {
             return levelName + "会员, 等级:" + userLevel + ", " + jingXiang;
-        }
-    }
-
-    @Scheduled(cron = "${task.cron.ck.checkLogin}")
-    public void cronCheckCkLogin(){
-        if(!checkCkSwitch){
-            return;
-        }
-        //MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(),  SDF.format(new Date()) + "：开始检查ck有效性");
-        //先检查是否过期
-        this.checkAccountExp();
-        List<Cookie> cookies = cookieService.getCookie(new HashMap<>(1){{put("available", "1");}});
-        List<String> qqs = new ArrayList<>();
-        AtomicInteger count = new AtomicInteger();
-        cookies.forEach(cookie -> {
-            JSONObject o = this.checkLogin(cookie.getCookie());
-            if(o != null){
-                if (o.getIntValue("islogin") == 1) {
-                    //正常
-                }else if (o.getIntValue("islogin") == 0) {
-                    Cookie ck = new Cookie();
-                    ck.setId(cookie.getId());
-                    ck.setAvailable(0);
-                    cookieService.saveCookie(ck);
-                    MessageUtils.sendPrivateMsg(cookie.getQq(), "您的账号【" + cookie.getPtPin() + "】已过期，请重新获取！");
-                    count.getAndIncrement();
-                    qqs.add(cookie.getQq());
-                }else{
-                    MessageUtils.sendPrivateMsg(cookie.getQq(), "账号状态未知，请联系管理员！");
-                }
-            }
-        });
-        if(count.get() > 0){
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮ck有效性检测共有" + count + "个账号失效！分别为：\r\n" + String.join("，", qqs));
-        }
-    }
-
-    /**
-     * 检查账号到期未禁用的
-     */
-    private void checkAccountExp(){
-        List<Map<String, Object>> cookies = cookieService.getExpCookie();
-        List<String> qqs = new ArrayList<>();
-        AtomicInteger count = new AtomicInteger();
-        cookies.forEach(cookie -> {
-            Cookie ck = new Cookie();
-            ck.setId(cookie.get("id").toString());
-            ck.setAvailable(0);
-            cookieService.saveCookie(ck);
-            MessageUtils.sendPrivateMsg(cookie.get("qq").toString(), "您的代挂服务已到期，请重新续费后再次使用！");
-            count.getAndIncrement();
-            qqs.add(cookie.get("qq").toString());
-        });
-        if(count.get() > 0){
-            MessageUtils.sendPrivateMsg(CommonUtils.getAdminQq(), "本轮服务有效性检测共有" + count + "个账号失效！分别为：\r\n" + String.join("，", qqs));
         }
     }
 
