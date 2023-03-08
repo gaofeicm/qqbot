@@ -13,14 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static me.chanjar.weixin.common.api.WxConsts.EventType;
-import static me.chanjar.weixin.common.api.WxConsts.EventType.SUBSCRIBE;
-import static me.chanjar.weixin.common.api.WxConsts.EventType.UNSUBSCRIBE;
-import static me.chanjar.weixin.common.api.WxConsts.XmlMsgType;
-import static me.chanjar.weixin.common.api.WxConsts.XmlMsgType.EVENT;
-import static me.chanjar.weixin.mp.constant.WxMpEventConstants.CustomerService.*;
-import static me.chanjar.weixin.mp.constant.WxMpEventConstants.POI_CHECK_NOTIFY;
-
 /**
  * wechat mp configuration
  *
@@ -77,8 +69,11 @@ public class WxMpConfiguration {
     public WxMpMessageRouter messageRouter(WxMpService wxMpService) {
         final WxMpMessageRouter newRouter = new WxMpMessageRouter(wxMpService);
 
+        // 默认
+        newRouter.rule().async(false).handler(this.msgHandler).end();
+
         // 记录所有事件的日志 （异步执行）
-        newRouter.rule().handler(this.logHandler).next();
+        /*newRouter.rule().handler(this.logHandler).next();
 
         // 接收客服会话管理事件
         newRouter.rule().async(false).msgType(EVENT).event(KF_CREATE_SESSION)
@@ -110,10 +105,7 @@ public class WxMpConfiguration {
         newRouter.rule().async(false).msgType(XmlMsgType.LOCATION).handler(this.locationHandler).end();
 
         // 扫码事件
-        newRouter.rule().async(false).msgType(EVENT).event(EventType.SCAN).handler(this.scanHandler).end();
-
-        // 默认
-        newRouter.rule().async(false).handler(this.msgHandler).end();
+        newRouter.rule().async(false).msgType(EVENT).event(EventType.SCAN).handler(this.scanHandler).end();*/
 
         return newRouter;
     }
