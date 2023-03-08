@@ -1,6 +1,10 @@
 server:
-  port: 9959
+  port: 9000
 spring:
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password:
   datasource:
     username:
     password:
@@ -23,7 +27,13 @@ jasypt:
     password:
     algorithm: PBEWithMD5AndDES
     iv-generator-classname: org.jasypt.iv.NoIvGenerator
+jpk:
+  appId:
+  appKey:
+  unionId:
 serviceAddress:
+jpkServiceAddress:
+jpkServiceEnable:
 maiarkAddress:
 admin:
   qq:
@@ -31,3 +41,20 @@ task:
   cron:
     ck:
       checkLogin: 0 0 0/2 * * ?
+      checkLogout: 0 0 12 ? * SUN
+logging:
+  level:
+    org.springframework.web: INFO
+    com.github.binarywang.demo.wx.mp: DEBUG
+    me.chanjar.weixin: DEBUG
+wx:
+  mp:
+    useRedis: false
+    redisConfig:
+      host: 127.0.0.1
+      port: 6379
+    configs:
+      - appId:  # 第一个公众号的appid
+        secret:  # 公众号的appsecret
+        token:  # 接口配置里的Token值
+        aesKey:  # 接口配置里的EncodingAESKey值
